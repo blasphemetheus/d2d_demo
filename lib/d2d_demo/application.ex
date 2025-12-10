@@ -1,0 +1,33 @@
+defmodule D2dDemo.Application do
+  # See https://hexdocs.pm/elixir/Application.html
+  # for more information on OTP Applications
+  @moduledoc false
+
+  use Application
+
+  @impl true
+  def start(_type, _args) do
+    children = [
+      D2dDemoWeb.Telemetry,
+      {DNSCluster, query: Application.get_env(:d2d_demo, :dns_cluster_query) || :ignore},
+      {Phoenix.PubSub, name: D2dDemo.PubSub},
+      # LoRa serial communication
+      D2dDemo.LoRa,
+      # Start to serve requests, typically the last entry
+      D2dDemoWeb.Endpoint
+    ]
+
+    # See https://hexdocs.pm/elixir/Supervisor.html
+    # for other strategies and supported options
+    opts = [strategy: :one_for_one, name: D2dDemo.Supervisor]
+    Supervisor.start_link(children, opts)
+  end
+
+  # Tell Phoenix to update the endpoint configuration
+  # whenever the application is updated.
+  @impl true
+  def config_change(changed, _new, removed) do
+    D2dDemoWeb.Endpoint.config_change(changed, removed)
+    :ok
+  end
+end
