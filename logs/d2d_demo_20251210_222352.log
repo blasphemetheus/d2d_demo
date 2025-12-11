@@ -1,0 +1,11 @@
+# D2D Demo Log
+# Started: 2025-12-11T04:23:52.758767Z
+# Format: TIMESTAMP	DIRECTION	MESSAGE	HEX
+#
+2025-12-11T04:24:01.918122Z	EVENT	"WIFI_CONNECTED: wlp0s20f3 at 192.168.12.2"
+2025-12-11T04:24:15.804209Z	WIFI	PING	%{label: "", timestamp: ~U[2025-12-11 04:24:15.804157Z], transport: :wifi, target_ip: "192.168.12.1", test_type: :ping, packet_loss_percent: 0.0, packets_received: 10, packets_sent: 10, rtt_avg_ms: 6.991, rtt_max_ms: 22.173, rtt_min_ms: 4.177, rtt_stddev_ms: 5.191}
+2025-12-11T04:24:45.128007Z	WIFI	THROUGHPUT	%{label: "testing_inside_my_room", timestamp: ~U[2025-12-11 04:24:45.127924Z], transport: :wifi, target_ip: "192.168.12.1", test_type: :throughput, bandwidth_mbps: 16.46, bytes_transferred: 20578304, duration_sec: 10, retransmits: 0}
+2025-12-11T04:24:56.418222Z	WIFI	PING	%{label: "testing_inside_my_room", timestamp: ~U[2025-12-11 04:24:56.418101Z], transport: :wifi, target_ip: "192.168.12.1", test_type: :ping, packet_loss_percent: 0.0, packets_received: 10, packets_sent: 10, rtt_avg_ms: 4.491, rtt_max_ms: 5.922, rtt_min_ms: 3.298, rtt_stddev_ms: 0.78}
+2025-12-11T04:25:25.702338Z	WIFI	THROUGHPUT	%{label: "testing_inside_my_room", timestamp: ~U[2025-12-11 04:25:25.702274Z], transport: :wifi, target_ip: "192.168.12.1", test_type: :throughput, bandwidth_mbps: 17.09, bytes_transferred: 21364736, duration_sec: 10, retransmits: 0}
+2025-12-11T04:27:09.346763Z	EVENT	"WIFI_DISCONNECTED: wlp0s20f3"
+2025-12-11T04:27:10.660768Z	EVENT	"WIFI_RESET: NetworkManager restored"

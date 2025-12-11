@@ -18,7 +18,7 @@ defmodule D2dDemoWeb.DashboardLive do
        # Tab state
        active_tab: :lora,
        # LoRa state
-       lora_connected: LoRa.connected?(),
+       lora_connected: safe_call(fn -> LoRa.connected?() end, false),
        lora_port: "/dev/ttyACM0",
        radio_settings: nil,
        tx_message: "",
@@ -28,20 +28,29 @@ defmodule D2dDemoWeb.DashboardLive do
        bandwidth: "125",
        power: "14",
        # WiFi state
-       wifi_connected: WiFi.connected?(),
-       wifi_interface: WiFi.get_interface(),
+       wifi_connected: safe_call(fn -> WiFi.connected?() end, false),
+       wifi_interface: safe_call(fn -> WiFi.get_interface() end, "wlp0s20f3"),
        wifi_rssi: nil,
        wifi_test_running: false,
        wifi_test_results: [],
        # Bluetooth state
-       bt_connected: Bluetooth.connected?(),
-       bt_peer_mac: Bluetooth.get_peer_mac(),
+       bt_connected: safe_call(fn -> Bluetooth.connected?() end, false),
+       bt_peer_mac: safe_call(fn -> Bluetooth.get_peer_mac() end, "B8:27:EB:D6:9C:95"),
        bt_test_running: false,
        bt_test_results: [],
        # Shared
        test_label: "",
        command_log: []
      )}
+  end
+
+  # Safe wrapper for GenServer calls that might timeout
+  defp safe_call(fun, default) do
+    fun.()
+  rescue
+    _ -> default
+  catch
+    :exit, _ -> default
   end
 
   # ============================================

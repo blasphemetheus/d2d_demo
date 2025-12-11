@@ -1,0 +1,3 @@
+{"timestamp":"2025-12-11T05:17:04.592279Z","type":"event","event":"BT_CONNECTED: B8:27:EB:D6:9C:95 at 192.168.44.2"}
+{"timestamp":"2025-12-11T05:17:42.828573Z","type":"network_test","result":{"error":"Some packets may have been lost","label":"","timestamp":"2025-12-11T05:17:42.828422Z","transport":"bluetooth","route":{"raw":"192.168.44.1 dev bnep0 src 192.168.44.2 uid 1006 \n    cache","interface":"bnep0","source_ip":"192.168.44.2"},"test_type":"ping","target_ip":"192.168.44.1","packet_loss_percent":100.0,"packets_received":0,"packets_sent":10,"rtt_avg_ms":0.0,"rtt_max_ms":0.0,"rtt_min_ms":0.0,"rtt_stddev_ms":0.0},"transport":"bluetooth","test_type":"ping"}
+{"timestamp":"2025-12-11T05:28:24.517261Z","type":"event","event":"BT_DISCONNECTED: B8:27:EB:D6:9C:95"}

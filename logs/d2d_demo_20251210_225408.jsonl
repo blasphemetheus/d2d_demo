@@ -1,0 +1,4 @@
+{"timestamp":"2025-12-11T04:54:15.458359Z","type":"event","event":"WIFI_CONNECTED: wlp0s20f3 at 192.168.12.2"}
+{"timestamp":"2025-12-11T04:54:28.988340Z","type":"network_test","result":{"error":"Some packets may have been lost","label":"","timestamp":"2025-12-11T04:54:28.988223Z","transport":"wifi","route":{"raw":"192.168.12.1 dev wlp0s20f3 src 192.168.12.2 uid 1006 \n    cache","interface":"wlp0s20f3","source_ip":"192.168.12.2"},"test_type":"ping","target_ip":"192.168.12.1","packet_loss_percent":100.0,"packets_received":0,"packets_sent":10,"rtt_avg_ms":0.0,"rtt_max_ms":0.0,"rtt_min_ms":0.0,"rtt_stddev_ms":0.0},"transport":"wifi","test_type":"ping"}
+{"timestamp":"2025-12-11T04:55:34.474072Z","type":"event","event":"WIFI_DISCONNECTED: wlp0s20f3"}
+{"timestamp":"2025-12-11T04:55:35.998789Z","type":"event","event":"WIFI_RESET: NetworkManager restored"}
