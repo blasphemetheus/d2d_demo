@@ -594,6 +594,7 @@ defmodule D2dDemoWeb.DashboardLive do
           <button phx-click="quick_cmd" phx-value-cmd="radio get bw" class="btn btn-xs btn-outline" disabled={!@lora_connected}>radio get bw</button>
           <button phx-click="quick_cmd" phx-value-cmd="radio get pwr" class="btn btn-xs btn-outline" disabled={!@lora_connected}>radio get pwr</button>
           <button phx-click="quick_cmd" phx-value-cmd="radio rx 0" class="btn btn-xs btn-outline btn-secondary" disabled={!@lora_connected}>radio rx 0</button>
+          <button phx-click="quick_cmd" phx-value-cmd="radio rxstop" class="btn btn-xs btn-outline btn-warning" disabled={!@lora_connected}>radio rxstop</button>
         </div>
       </div>
     </div>
