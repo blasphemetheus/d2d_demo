@@ -44,13 +44,15 @@ defmodule D2dDemo.Ping do
 
   @impl true
   def init(_opts) do
-    # Subscribe to LoRa RX events
+    # Subscribe to LoRa RX and TX events
     Phoenix.PubSub.subscribe(D2dDemo.PubSub, "lora:rx")
+    Phoenix.PubSub.subscribe(D2dDemo.PubSub, "lora:tx")
 
     {:ok,
      %{
        running: false,
        pending_ping: nil,
+       waiting_for_tx_ok: false,
        results: [],
        test_count: 0,
        test_total: 0
@@ -72,9 +74,7 @@ defmodule D2dDemo.Ping do
           # Start timeout timer
           timer_ref = Process.send_after(self(), {:ping_timeout, seq}, timeout)
 
-          # Enter RX mode
-          LoRa.receive_mode(0)
-
+          # Wait for tx_ok before entering RX mode (TX takes ~1s at SF12)
           {:noreply,
            %{state |
              pending_ping: %{
@@ -82,7 +82,8 @@ defmodule D2dDemo.Ping do
                seq: seq,
                sent_at: sent_at,
                timer_ref: timer_ref
-             }
+             },
+             waiting_for_tx_ok: true
            }}
 
         {:error, reason} ->
@@ -154,8 +155,36 @@ defmodule D2dDemo.Ping do
   def handle_info({:ping_timeout, seq}, state) do
     if state.pending_ping && state.pending_ping.seq == seq do
       Logger.warning("Ping timeout (seq=#{seq})")
-      GenServer.reply(state.pending_ping.from, {:error, :timeout})
-      {:noreply, %{state | pending_ping: nil}}
+      if state.pending_ping.from do
+        GenServer.reply(state.pending_ping.from, {:error, :timeout})
+      end
+      {:noreply, %{state | pending_ping: nil, waiting_for_tx_ok: false}}
+    else
+      {:noreply, state}
+    end
+  end
+
+  @impl true
+  def handle_info(:tx_ok, state) do
+    if state.waiting_for_tx_ok and state.pending_ping do
+      # TX complete, now enter RX mode to listen for response
+      Logger.debug("Ping: TX complete, entering RX mode")
+      LoRa.receive_mode(0)
+      {:noreply, %{state | waiting_for_tx_ok: false}}
+    else
+      {:noreply, state}
+    end
+  end
+
+  @impl true
+  def handle_info(:tx_error, state) do
+    if state.waiting_for_tx_ok and state.pending_ping do
+      Logger.warning("Ping: TX error")
+      if state.pending_ping.from do
+        Process.cancel_timer(state.pending_ping.timer_ref)
+        GenServer.reply(state.pending_ping.from, {:error, :tx_error})
+      end
+      {:noreply, %{state | pending_ping: nil, waiting_for_tx_ok: false}}
     else
       {:noreply, state}
     end
@@ -176,10 +205,7 @@ defmodule D2dDemo.Ping do
 
       case LoRa.transmit(message) do
         {:ok, _} ->
-          # Enter RX mode
-          LoRa.receive_mode(0)
-
-          # Wait for response inline
+          # Wait for tx_ok before entering RX mode
           timer_ref = Process.send_after(self(), {:test_ping_timeout, seq, opts}, timeout)
 
           {:noreply,
@@ -191,6 +217,7 @@ defmodule D2dDemo.Ping do
                timer_ref: timer_ref,
                opts: opts
              },
+             waiting_for_tx_ok: true,
              test_count: state.test_count + 1
            }}
 
@@ -216,7 +243,7 @@ defmodule D2dDemo.Ping do
       # Schedule next ping
       Process.send_after(self(), {:run_next_ping, opts}, 500)
 
-      {:noreply, %{state | pending_ping: nil, results: [result | state.results]}}
+      {:noreply, %{state | pending_ping: nil, waiting_for_tx_ok: false, results: [result | state.results]}}
     else
       {:noreply, state}
     end
