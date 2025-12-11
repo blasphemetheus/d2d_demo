@@ -29,7 +29,7 @@ defmodule D2dDemoWeb.DashboardLive do
        power: "14",
        # WiFi state
        wifi_connected: WiFi.connected?(),
-       wifi_interface: "wlan0",
+       wifi_interface: WiFi.get_interface(),
        wifi_rssi: nil,
        wifi_test_running: false,
        wifi_test_results: [],
@@ -39,6 +39,7 @@ defmodule D2dDemoWeb.DashboardLive do
        bt_test_running: false,
        bt_test_results: [],
        # Shared
+       test_label: "",
        command_log: []
      )}
   end
@@ -179,10 +180,10 @@ defmodule D2dDemoWeb.DashboardLive do
     socket = add_log(socket, "WiFi: Connecting to ad-hoc network...")
     case WiFi.setup(socket.assigns.wifi_interface) do
       :ok ->
-        rssi = WiFi.get_rssi()
+        # Don't fetch RSSI immediately - it may not be available yet
         {:noreply,
          socket
-         |> assign(wifi_connected: true, wifi_rssi: rssi)
+         |> assign(wifi_connected: true, wifi_rssi: nil)
          |> add_log("WiFi: Connected on #{socket.assigns.wifi_interface}")}
       {:error, reason} ->
         {:noreply, add_log(socket, "WiFi: Connection failed: #{String.slice(to_string(reason), 0, 100)}")}
@@ -204,12 +205,23 @@ defmodule D2dDemoWeb.DashboardLive do
   end
 
   @impl true
+  def handle_event("wifi_reset", _params, socket) do
+    socket = add_log(socket, "WiFi: Resetting NetworkManager...")
+    WiFi.reset_network_manager()
+    {:noreply,
+     socket
+     |> assign(wifi_connected: false, wifi_rssi: nil)
+     |> add_log("WiFi: NetworkManager restored")}
+  end
+
+  @impl true
   def handle_event("wifi_ping", _params, socket) do
     socket = socket |> assign(wifi_test_running: true) |> add_log("WiFi: Running ping test...")
     peer_ip = WiFi.get_peer_ip()
+    label = socket.assigns.test_label
 
     Task.start(fn ->
-      TestRunner.run_ping(peer_ip, 10, transport: :wifi)
+      TestRunner.run_ping(peer_ip, 10, transport: :wifi, label: label)
     end)
 
     {:noreply, socket}
@@ -219,12 +231,18 @@ defmodule D2dDemoWeb.DashboardLive do
   def handle_event("wifi_throughput", _params, socket) do
     socket = socket |> assign(wifi_test_running: true) |> add_log("WiFi: Running throughput test...")
     peer_ip = WiFi.get_peer_ip()
+    label = socket.assigns.test_label
 
     Task.start(fn ->
-      TestRunner.run_throughput(peer_ip, 10, transport: :wifi)
+      TestRunner.run_throughput(peer_ip, 10, transport: :wifi, label: label)
     end)
 
     {:noreply, socket}
+  end
+
+  @impl true
+  def handle_event("update_test_label", %{"label" => label}, socket) do
+    {:noreply, assign(socket, test_label: label)}
   end
 
   # ============================================
@@ -264,9 +282,10 @@ defmodule D2dDemoWeb.DashboardLive do
   def handle_event("bt_ping", _params, socket) do
     socket = socket |> assign(bt_test_running: true) |> add_log("Bluetooth: Running ping test...")
     peer_ip = Bluetooth.get_peer_ip()
+    label = socket.assigns.test_label
 
     Task.start(fn ->
-      TestRunner.run_ping(peer_ip, 10, transport: :bluetooth)
+      TestRunner.run_ping(peer_ip, 10, transport: :bluetooth, label: label)
     end)
 
     {:noreply, socket}
@@ -276,9 +295,10 @@ defmodule D2dDemoWeb.DashboardLive do
   def handle_event("bt_throughput", _params, socket) do
     socket = socket |> assign(bt_test_running: true) |> add_log("Bluetooth: Running throughput test...")
     peer_ip = Bluetooth.get_peer_ip()
+    label = socket.assigns.test_label
 
     Task.start(fn ->
-      TestRunner.run_throughput(peer_ip, 10, transport: :bluetooth)
+      TestRunner.run_throughput(peer_ip, 10, transport: :bluetooth, label: label)
     end)
 
     {:noreply, socket}
@@ -342,16 +362,16 @@ defmodule D2dDemoWeb.DashboardLive do
      |> add_log("Bluetooth: #{log_msg}")}
   end
 
+  defp format_test_result(%{error: error}) do
+    "Error: #{error}"
+  end
+
   defp format_test_result(%{test_type: :ping} = r) do
     "Ping: #{r.rtt_avg_ms}ms avg, #{r.packet_loss_percent}% loss"
   end
 
   defp format_test_result(%{test_type: :throughput} = r) do
     "Throughput: #{r.bandwidth_mbps} Mbps"
-  end
-
-  defp format_test_result(%{error: error}) do
-    "Error: #{error}"
   end
 
   defp add_log(socket, message) do
@@ -369,6 +389,21 @@ defmodule D2dDemoWeb.DashboardLive do
     <div class="min-h-screen bg-base-200 p-4">
       <div class="max-w-6xl mx-auto">
         <h1 class="text-3xl font-bold mb-6">D2D Communication Demo</h1>
+
+        <!-- Test Label -->
+        <div class="flex items-center gap-4 mb-4">
+          <span class="font-semibold">Test Label:</span>
+          <form phx-change="update_test_label" class="flex-1 max-w-md">
+            <input
+              type="text"
+              name="label"
+              value={@test_label}
+              phx-debounce="200"
+              class="input input-bordered input-sm w-full"
+              placeholder="e.g. 20ft_test1, indoor_close, outdoor_50m"
+            />
+          </form>
+        </div>
 
         <!-- Tab Navigation -->
         <div class="tabs tabs-boxed mb-6 bg-base-100 p-2">
@@ -552,14 +587,16 @@ defmodule D2dDemoWeb.DashboardLive do
           <div class={"badge badge-lg " <> if(@wifi_connected, do: "badge-success", else: "badge-error")}>
             <%= if @wifi_connected, do: "Connected", else: "Disconnected" %>
           </div>
-          <input
-            type="text"
-            value={@wifi_interface}
-            phx-blur="update_wifi_interface"
-            phx-value-interface={@wifi_interface}
-            class="input input-bordered input-sm w-32"
-            placeholder="wlan0"
-          />
+          <form phx-change="update_wifi_interface" class="contents">
+            <input
+              type="text"
+              name="interface"
+              value={@wifi_interface}
+              phx-debounce="300"
+              class="input input-bordered input-sm w-40"
+              placeholder="wlp0s20f3"
+            />
+          </form>
           <%= if @wifi_connected do %>
             <button phx-click="wifi_disconnect" class="btn btn-error btn-sm">Disconnect</button>
             <%= if @wifi_rssi do %>
@@ -567,6 +604,7 @@ defmodule D2dDemoWeb.DashboardLive do
             <% end %>
           <% else %>
             <button phx-click="wifi_connect" class="btn btn-primary btn-sm">Connect</button>
+            <button phx-click="wifi_reset" class="btn btn-warning btn-sm">Reset NetworkManager</button>
           <% end %>
         </div>
         <div class="text-sm text-base-content/70 mt-2">
@@ -670,20 +708,22 @@ defmodule D2dDemoWeb.DashboardLive do
               <thead>
                 <tr>
                   <th>Time</th>
+                  <th>Label</th>
                   <th>Test</th>
                   <th>Latency (ms)</th>
                   <th>Throughput (Mbps)</th>
-                  <th>Packet Loss</th>
+                  <th>Loss %</th>
                 </tr>
               </thead>
               <tbody>
                 <%= for result <- @results do %>
                   <tr>
                     <td><%= Calendar.strftime(result.timestamp, "%H:%M:%S") %></td>
+                    <td class="font-mono text-xs"><%= Map.get(result, :label, "") %></td>
                     <td><%= result.test_type %></td>
                     <td><%= Map.get(result, :rtt_avg_ms) || "-" %></td>
                     <td><%= Map.get(result, :bandwidth_mbps) || "-" %></td>
-                    <td><%= Map.get(result, :packet_loss_percent) || "-" %>%</td>
+                    <td><%= if Map.get(result, :packet_loss_percent), do: "#{result.packet_loss_percent}%", else: "-" %></td>
                   </tr>
                 <% end %>
               </tbody>

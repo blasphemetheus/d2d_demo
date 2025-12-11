@@ -43,10 +43,11 @@ defmodule D2dDemo.Network.TestRunner do
   @impl true
   def handle_call({:run_ping, target_ip, count, opts}, _from, state) do
     transport = Keyword.get(opts, :transport, :unknown)
+    label = Keyword.get(opts, :label, "")
 
     Phoenix.PubSub.broadcast(D2dDemo.PubSub, "network:test", {:test_started, :ping, transport})
 
-    result = do_ping(target_ip, count, transport)
+    result = do_ping(target_ip, count, transport) |> Map.put(:label, label)
 
     Phoenix.PubSub.broadcast(D2dDemo.PubSub, "network:test", {:test_complete, :ping, result})
     D2dDemo.FileLogger.log_network_test(transport, :ping, result)
@@ -57,10 +58,11 @@ defmodule D2dDemo.Network.TestRunner do
   @impl true
   def handle_call({:run_throughput, target_ip, duration, opts}, _from, state) do
     transport = Keyword.get(opts, :transport, :unknown)
+    label = Keyword.get(opts, :label, "")
 
     Phoenix.PubSub.broadcast(D2dDemo.PubSub, "network:test", {:test_started, :throughput, transport})
 
-    result = do_throughput(target_ip, duration, transport)
+    result = do_throughput(target_ip, duration, transport) |> Map.put(:label, label)
 
     Phoenix.PubSub.broadcast(D2dDemo.PubSub, "network:test", {:test_complete, :throughput, result})
     D2dDemo.FileLogger.log_network_test(transport, :throughput, result)
@@ -92,7 +94,7 @@ defmodule D2dDemo.Network.TestRunner do
     {packets_received, packet_loss} =
       case Regex.run(~r/(\d+) packets transmitted, (\d+) received.*?(\d+(?:\.\d+)?)% packet loss/, output) do
         [_, _sent, received, loss] ->
-          {String.to_integer(received), String.to_float(loss)}
+          {String.to_integer(received), parse_number(loss)}
         _ ->
           {0, 100.0}
       end
@@ -101,7 +103,7 @@ defmodule D2dDemo.Network.TestRunner do
     {rtt_min, rtt_avg, rtt_max, rtt_stddev} =
       case Regex.run(~r/rtt min\/avg\/max\/mdev = ([\d.]+)\/([\d.]+)\/([\d.]+)\/([\d.]+)/, output) do
         [_, min, avg, max, mdev] ->
-          {String.to_float(min), String.to_float(avg), String.to_float(max), String.to_float(mdev)}
+          {parse_number(min), parse_number(avg), parse_number(max), parse_number(mdev)}
         _ ->
           {0.0, 0.0, 0.0, 0.0}
       end
@@ -191,6 +193,14 @@ defmodule D2dDemo.Network.TestRunner do
           transport: transport,
           test_type: :throughput
         }
+    end
+  end
+
+  # Parse a string as float, handling integers like "0" that String.to_float rejects
+  defp parse_number(str) do
+    case Float.parse(str) do
+      {num, _} -> num
+      :error -> 0.0
     end
   end
 end

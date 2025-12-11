@@ -6,7 +6,7 @@ defmodule D2dDemo.Network.WiFi do
   use GenServer
   require Logger
 
-  @default_interface "wlan0"
+  @default_interface "wlp0s20f3"
   @default_ssid "PiAdhoc"
   @default_freq "2437"
   @default_ip "192.168.12.2"
@@ -40,6 +40,10 @@ defmodule D2dDemo.Network.WiFi do
 
   def get_peer_ip do
     @peer_ip
+  end
+
+  def reset_network_manager do
+    GenServer.call(__MODULE__, :reset_network_manager, 30_000)
   end
 
   def get_interface do
@@ -112,6 +116,14 @@ defmodule D2dDemo.Network.WiFi do
   end
 
   @impl true
+  def handle_call(:reset_network_manager, _from, state) do
+    do_reset_network_manager()
+    D2dDemo.FileLogger.log_event("WIFI_RESET: NetworkManager restored")
+    Phoenix.PubSub.broadcast(D2dDemo.PubSub, "network:wifi:status", {:wifi_connected, false})
+    {:reply, :ok, %{state | connected: false}}
+  end
+
+  @impl true
   def terminate(_reason, state) do
     if state.connected do
       Logger.info("WiFi: Cleaning up ad-hoc network...")
@@ -151,17 +163,47 @@ defmodule D2dDemo.Network.WiFi do
     end
   end
 
-  defp fetch_rssi(interface) do
-    case System.cmd("iwconfig", [interface], stderr_to_stdout: true) do
+  defp do_reset_network_manager do
+    # Just restart NetworkManager - it will reclaim the interface
+    case System.cmd("sudo", ["systemctl", "restart", "NetworkManager"], stderr_to_stdout: true) do
       {output, 0} ->
-        # Parse "Signal level=-XX dBm" from iwconfig output
-        case Regex.run(~r/Signal level[=:](-?\d+)\s*dBm/i, output) do
-          [_, rssi] -> String.to_integer(rssi)
+        Logger.debug("NetworkManager restart output: #{output}")
+        :ok
+
+      {output, code} ->
+        Logger.warning("NetworkManager restart issue (exit #{code}): #{output}")
+        :ok
+    end
+  end
+
+  defp fetch_rssi(interface) do
+    # Try iw first (more modern), then iwconfig
+    case System.find_executable("iw") do
+      nil -> fetch_rssi_iwconfig(interface)
+      _path ->
+        case System.cmd("iw", ["dev", interface, "link"], stderr_to_stdout: true) do
+          {output, 0} ->
+            case Regex.run(~r/signal:\s*(-?\d+)\s*dBm/i, output) do
+              [_, rssi] -> String.to_integer(rssi)
+              _ -> nil
+            end
           _ -> nil
         end
+    end
+  end
 
-      _ ->
-        nil
+  defp fetch_rssi_iwconfig(interface) do
+    case System.find_executable("iwconfig") do
+      nil -> nil
+      _path ->
+        case System.cmd("iwconfig", [interface], stderr_to_stdout: true) do
+          {output, 0} ->
+            case Regex.run(~r/Signal level[=:](-?\d+)\s*dBm/i, output) do
+              [_, rssi] -> String.to_integer(rssi)
+              _ -> nil
+            end
+          _ -> nil
+        end
     end
   end
 
