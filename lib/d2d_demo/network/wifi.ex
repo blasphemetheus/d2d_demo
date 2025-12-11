@@ -54,14 +54,34 @@ defmodule D2dDemo.Network.WiFi do
 
   @impl true
   def init(opts) do
+    interface = Keyword.get(opts, :interface, @default_interface)
+    # Check if already connected (IBSS mode with correct IP)
+    connected = check_existing_connection(interface)
+
+    if connected do
+      Logger.info("WiFi: Detected existing IBSS connection on #{interface}")
+    end
+
     state = %{
-      interface: Keyword.get(opts, :interface, @default_interface),
-      connected: false,
+      interface: interface,
+      connected: connected,
       ip: @default_ip,
       peer_ip: @peer_ip
     }
 
     {:ok, state}
+  end
+
+  defp check_existing_connection(interface) do
+    # Check if interface is in IBSS mode with our IP
+    with {iw_output, 0} <- System.cmd("iw", ["dev", interface, "info"], stderr_to_stdout: true),
+         true <- String.contains?(iw_output, "type IBSS") or String.contains?(iw_output, "type ibss"),
+         {ip_output, 0} <- System.cmd("ip", ["addr", "show", interface], stderr_to_stdout: true),
+         true <- String.contains?(ip_output, @default_ip) do
+      true
+    else
+      _ -> false
+    end
   end
 
   @impl true

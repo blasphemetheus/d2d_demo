@@ -17,7 +17,7 @@ defmodule D2dDemo.Network.Bluetooth do
   end
 
   def connect(peer_mac \\ @default_peer_mac, ip \\ @default_ip) do
-    GenServer.call(__MODULE__, {:connect, peer_mac, ip}, 30_000)
+    GenServer.call(__MODULE__, {:connect, peer_mac, ip}, 60_000)
   end
 
   def disconnect do
@@ -48,14 +48,31 @@ defmodule D2dDemo.Network.Bluetooth do
 
   @impl true
   def init(opts) do
+    # Check if already connected (bnep0 exists with correct IP)
+    connected = check_existing_connection()
+
+    if connected do
+      Logger.info("Bluetooth: Detected existing bnep0 connection")
+    end
+
     state = %{
-      connected: false,
+      connected: connected,
       peer_mac: Keyword.get(opts, :peer_mac, @default_peer_mac),
       ip: @default_ip,
       peer_ip: @peer_ip
     }
 
     {:ok, state}
+  end
+
+  defp check_existing_connection do
+    case System.cmd("ip", ["addr", "show", "bnep0"], stderr_to_stdout: true) do
+      {output, 0} ->
+        # Check if our IP is assigned
+        String.contains?(output, @default_ip)
+      _ ->
+        false
+    end
   end
 
   @impl true
@@ -120,15 +137,24 @@ defmodule D2dDemo.Network.Bluetooth do
 
   defp do_connect(peer_mac, ip) do
     script = scripts_path("bt_connect.sh")
+    Logger.info("Bluetooth: Running connect script: sudo #{script} #{peer_mac} #{ip}")
 
-    case System.cmd("sudo", [script, peer_mac, ip], stderr_to_stdout: true) do
-      {output, 0} ->
-        Logger.debug("Bluetooth connect output: #{output}")
+    task = Task.async(fn ->
+      System.cmd("sudo", [script, peer_mac, ip], stderr_to_stdout: true)
+    end)
+
+    case Task.yield(task, 45_000) || Task.shutdown(task) do
+      {:ok, {output, 0}} ->
+        Logger.info("Bluetooth connect output: #{output}")
         :ok
 
-      {output, code} ->
+      {:ok, {output, code}} ->
         Logger.error("Bluetooth connect failed (exit #{code}): #{output}")
         {:error, output}
+
+      nil ->
+        Logger.error("Bluetooth connect timed out after 45 seconds")
+        {:error, "Connection timed out"}
     end
   end
 
