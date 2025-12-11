@@ -78,14 +78,19 @@ defmodule D2dDemo.Network.TestRunner do
   # Private functions
 
   defp do_ping(target_ip, count, transport) do
+    route_info = get_route_info(target_ip)
+
     case System.cmd("ping", ["-c", to_string(count), "-W", "2", target_ip], stderr_to_stdout: true) do
       {output, 0} ->
         parse_ping_output(output, target_ip, count, transport)
+        |> Map.put(:route, route_info)
 
       {output, _code} ->
         # Partial success or failure - still try to parse
         result = parse_ping_output(output, target_ip, count, transport)
-        Map.put(result, :error, "Some packets may have been lost")
+        result
+        |> Map.put(:error, "Some packets may have been lost")
+        |> Map.put(:route, route_info)
     end
   end
 
@@ -124,6 +129,8 @@ defmodule D2dDemo.Network.TestRunner do
   end
 
   defp do_throughput(target_ip, duration, transport) do
+    route_info = get_route_info(target_ip)
+
     case System.find_executable("iperf3") do
       nil ->
         %{
@@ -131,7 +138,8 @@ defmodule D2dDemo.Network.TestRunner do
           target_ip: target_ip,
           timestamp: DateTime.utc_now(),
           transport: transport,
-          test_type: :throughput
+          test_type: :throughput,
+          route: route_info
         }
 
       _path ->
@@ -140,6 +148,7 @@ defmodule D2dDemo.Network.TestRunner do
         case System.cmd("iperf3", args, stderr_to_stdout: true) do
           {output, 0} ->
             parse_iperf_output(output, target_ip, duration, transport)
+            |> Map.put(:route, route_info)
 
           {output, _code} ->
             Logger.error("iperf3 failed: #{output}")
@@ -148,7 +157,8 @@ defmodule D2dDemo.Network.TestRunner do
               target_ip: target_ip,
               timestamp: DateTime.utc_now(),
               transport: transport,
-              test_type: :throughput
+              test_type: :throughput,
+              route: route_info
             }
         end
     end
@@ -201,6 +211,38 @@ defmodule D2dDemo.Network.TestRunner do
     case Float.parse(str) do
       {num, _} -> num
       :error -> 0.0
+    end
+  end
+
+  # Get routing information for a target IP using `ip route get`.
+  # Returns a map with the interface and source IP that will be used.
+  defp get_route_info(target_ip) do
+    case System.cmd("ip", ["route", "get", target_ip], stderr_to_stdout: true) do
+      {output, 0} ->
+        # Parse output like: "192.168.12.1 dev wlp0s20f3 src 192.168.12.2 uid 1000"
+        interface = case Regex.run(~r/dev\s+(\S+)/, output) do
+          [_, dev] -> dev
+          _ -> nil
+        end
+
+        source_ip = case Regex.run(~r/src\s+(\S+)/, output) do
+          [_, src] -> src
+          _ -> nil
+        end
+
+        %{
+          interface: interface,
+          source_ip: source_ip,
+          raw: String.trim(output)
+        }
+
+      {output, _code} ->
+        Logger.warning("Failed to get route info for #{target_ip}: #{output}")
+        %{
+          interface: nil,
+          source_ip: nil,
+          error: String.trim(output)
+        }
     end
   end
 end

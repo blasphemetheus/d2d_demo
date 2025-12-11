@@ -362,17 +362,26 @@ defmodule D2dDemoWeb.DashboardLive do
      |> add_log("Bluetooth: #{log_msg}")}
   end
 
-  defp format_test_result(%{error: error}) do
-    "Error: #{error}"
+  defp format_test_result(%{error: error} = r) do
+    route_str = format_route_short(r)
+    "Error: #{error}#{route_str}"
   end
 
   defp format_test_result(%{test_type: :ping} = r) do
-    "Ping: #{r.rtt_avg_ms}ms avg, #{r.packet_loss_percent}% loss"
+    route_str = format_route_short(r)
+    "Ping: #{r.rtt_avg_ms}ms avg, #{r.packet_loss_percent}% loss#{route_str}"
   end
 
   defp format_test_result(%{test_type: :throughput} = r) do
-    "Throughput: #{r.bandwidth_mbps} Mbps"
+    route_str = format_route_short(r)
+    "Throughput: #{r.bandwidth_mbps} Mbps#{route_str}"
   end
+
+  defp format_route_short(%{route: %{interface: iface}}) when not is_nil(iface) do
+    " via #{iface}"
+  end
+
+  defp format_route_short(_), do: ""
 
   defp add_log(socket, message) do
     entry = %{message: message, timestamp: DateTime.utc_now()}
@@ -710,6 +719,7 @@ defmodule D2dDemoWeb.DashboardLive do
                   <th>Time</th>
                   <th>Label</th>
                   <th>Test</th>
+                  <th>Route</th>
                   <th>Latency (ms)</th>
                   <th>Throughput (Mbps)</th>
                   <th>Loss %</th>
@@ -721,6 +731,7 @@ defmodule D2dDemoWeb.DashboardLive do
                     <td><%= Calendar.strftime(result.timestamp, "%H:%M:%S") %></td>
                     <td class="font-mono text-xs"><%= Map.get(result, :label, "") %></td>
                     <td><%= result.test_type %></td>
+                    <td class="font-mono text-xs"><%= format_route(result) %></td>
                     <td><%= Map.get(result, :rtt_avg_ms) || "-" %></td>
                     <td><%= Map.get(result, :bandwidth_mbps) || "-" %></td>
                     <td><%= if Map.get(result, :packet_loss_percent), do: "#{result.packet_loss_percent}%", else: "-" %></td>
@@ -734,4 +745,14 @@ defmodule D2dDemoWeb.DashboardLive do
     <% end %>
     """
   end
+
+  defp format_route(%{route: %{interface: iface, source_ip: src}}) when not is_nil(iface) do
+    "#{iface} (#{src})"
+  end
+
+  defp format_route(%{route: %{error: error}}) do
+    "Error: #{error}"
+  end
+
+  defp format_route(_), do: "-"
 end
