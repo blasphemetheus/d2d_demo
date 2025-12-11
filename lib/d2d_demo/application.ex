@@ -11,6 +11,8 @@ defmodule D2dDemo.Application do
       D2dDemoWeb.Telemetry,
       {DNSCluster, query: Application.get_env(:d2d_demo, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: D2dDemo.PubSub},
+      # File logging for field data collection
+      D2dDemo.FileLogger,
       # LoRa serial communication
       D2dDemo.LoRa,
       # Start to serve requests, typically the last entry
