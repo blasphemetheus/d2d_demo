@@ -25,6 +25,10 @@ defmodule D2dDemo.FileLogger do
     GenServer.cast(__MODULE__, {:log_event, event})
   end
 
+  def log_network_test(transport, test_type, result) do
+    GenServer.cast(__MODULE__, {:log_network_test, transport, test_type, result})
+  end
+
   def get_log_path do
     GenServer.call(__MODULE__, :get_log_path)
   end
@@ -57,6 +61,16 @@ defmodule D2dDemo.FileLogger do
   def handle_cast({:log_event, event}, state) do
     timestamp = DateTime.utc_now() |> DateTime.to_iso8601()
     line = "#{timestamp}\tEVENT\t#{inspect(event)}\n"
+    IO.write(state.file, line)
+    {:noreply, state}
+  end
+
+  @impl true
+  def handle_cast({:log_network_test, transport, test_type, result}, state) do
+    timestamp = DateTime.utc_now() |> DateTime.to_iso8601()
+    transport_str = transport |> to_string() |> String.upcase()
+    test_str = test_type |> to_string() |> String.upcase()
+    line = "#{timestamp}\t#{transport_str}\t#{test_str}\t#{inspect(result)}\n"
     IO.write(state.file, line)
     {:noreply, state}
   end
