@@ -3,6 +3,8 @@ defmodule D2dDemoWeb.DashboardLive do
   alias D2dDemo.LoRa
   alias D2dDemo.Network.{WiFi, Bluetooth, TestRunner}
 
+  alias D2dDemo.{Beacon, Ping}
+
   @impl true
   def mount(_params, _session, socket) do
     if connected?(socket) do
@@ -11,6 +13,10 @@ defmodule D2dDemoWeb.DashboardLive do
       Phoenix.PubSub.subscribe(D2dDemo.PubSub, "network:wifi:status")
       Phoenix.PubSub.subscribe(D2dDemo.PubSub, "network:bluetooth:status")
       Phoenix.PubSub.subscribe(D2dDemo.PubSub, "network:test")
+      Phoenix.PubSub.subscribe(D2dDemo.PubSub, "beacon:status")
+      Phoenix.PubSub.subscribe(D2dDemo.PubSub, "beacon:tx")
+      Phoenix.PubSub.subscribe(D2dDemo.PubSub, "ping:status")
+      Phoenix.PubSub.subscribe(D2dDemo.PubSub, "ping:result")
     end
 
     {:ok,
@@ -29,6 +35,16 @@ defmodule D2dDemoWeb.DashboardLive do
        spreading_factor: "7",
        bandwidth: "125",
        power: "14",
+       # Beacon state
+       beacon_running: safe_call(fn -> Beacon.running?() end, false),
+       beacon_message: "PING",
+       beacon_interval: "3000",
+       beacon_tx_count: 0,
+       # Ping state
+       ping_running: safe_call(fn -> Ping.running?() end, false),
+       ping_count: "5",
+       ping_results: [],
+       ping_stats: nil,
        # WiFi state
        wifi_connected: safe_call(fn -> WiFi.connected?() end, false),
        wifi_interface: safe_call(fn -> WiFi.get_interface() end, "wlp0s20f3"),
@@ -231,6 +247,65 @@ defmodule D2dDemoWeb.DashboardLive do
   end
 
   # ============================================
+  # Beacon Events
+  # ============================================
+
+  @impl true
+  def handle_event("update_beacon_message", %{"message" => message}, socket) do
+    {:noreply, assign(socket, beacon_message: message)}
+  end
+
+  @impl true
+  def handle_event("update_beacon_interval", %{"interval" => interval}, socket) do
+    {:noreply, assign(socket, beacon_interval: interval)}
+  end
+
+  @impl true
+  def handle_event("start_beacon", _params, socket) do
+    interval = String.to_integer(socket.assigns.beacon_interval)
+    message = socket.assigns.beacon_message
+
+    case Beacon.start_beacon(message: message, interval: interval) do
+      :ok ->
+        {:noreply,
+         socket
+         |> assign(beacon_running: true, beacon_tx_count: 0)
+         |> add_log("Beacon: Started '#{message}' every #{interval}ms")}
+
+      {:error, reason} ->
+        {:noreply, add_log(socket, "Beacon error: #{inspect(reason)}")}
+    end
+  end
+
+  @impl true
+  def handle_event("stop_beacon", _params, socket) do
+    Beacon.stop_beacon()
+    {:noreply,
+     socket
+     |> assign(beacon_running: false)
+     |> add_log("Beacon: Stopped after #{socket.assigns.beacon_tx_count} transmissions")}
+  end
+
+  # ============================================
+  # Ping Events
+  # ============================================
+
+  @impl true
+  def handle_event("update_ping_count", %{"count" => count}, socket) do
+    {:noreply, assign(socket, ping_count: count)}
+  end
+
+  @impl true
+  def handle_event("start_ping_test", _params, socket) do
+    count = String.to_integer(socket.assigns.ping_count)
+    Ping.run_test(count)
+    {:noreply,
+     socket
+     |> assign(ping_running: true, ping_results: [], ping_stats: nil)
+     |> add_log("Ping: Starting #{count} ping test...")}
+  end
+
+  # ============================================
   # WiFi Events
   # ============================================
 
@@ -419,6 +494,57 @@ defmodule D2dDemoWeb.DashboardLive do
      |> assign(bt_test_running: false)
      |> update(:bt_test_results, fn results -> [result | Enum.take(results, 19)] end)
      |> add_log("Bluetooth: #{log_msg}")}
+  end
+
+  # Beacon PubSub handlers
+  @impl true
+  def handle_info({:beacon_status, status}, socket) do
+    {:noreply, assign(socket,
+      beacon_running: status.running,
+      beacon_tx_count: status.tx_count
+    )}
+  end
+
+  @impl true
+  def handle_info({:beacon_tx, _message, count}, socket) do
+    {:noreply, assign(socket, beacon_tx_count: count)}
+  end
+
+  # Ping PubSub handlers
+  @impl true
+  def handle_info({:ping_test_started, count}, socket) do
+    {:noreply,
+     socket
+     |> assign(ping_running: true, ping_results: [], ping_stats: nil)
+     |> add_log("Ping: Test started (#{count} pings)")}
+  end
+
+  @impl true
+  def handle_info({:ping_result, result, current, total}, socket) do
+    log_msg = if result.rtt do
+      "Ping #{current}/#{total}: #{result.rtt}ms"
+    else
+      "Ping #{current}/#{total}: timeout"
+    end
+
+    {:noreply,
+     socket
+     |> update(:ping_results, fn results -> [result | results] end)
+     |> add_log(log_msg)}
+  end
+
+  @impl true
+  def handle_info({:ping_test_complete, stats}, socket) do
+    log_msg = if stats.avg do
+      "Ping complete: #{stats.success}/#{stats.total} success, avg=#{stats.avg}ms, min=#{stats.min}ms, max=#{stats.max}ms"
+    else
+      "Ping complete: 0/#{stats.total} success (all timeouts)"
+    end
+
+    {:noreply,
+     socket
+     |> assign(ping_running: false, ping_stats: stats)
+     |> add_log(log_msg)}
   end
 
   defp format_test_result(%{error: error} = r) do
@@ -657,6 +783,114 @@ defmodule D2dDemoWeb.DashboardLive do
         <div class="flex gap-2 mt-2">
           <button phx-click="start_rx" class="btn btn-secondary" disabled={!@lora_connected}>Start Listening</button>
         </div>
+      </div>
+    </div>
+
+    <!-- Beacon Mode -->
+    <div class="card bg-base-100 shadow-xl">
+      <div class="card-body">
+        <div class="flex items-center justify-between">
+          <h2 class="card-title">Beacon Mode</h2>
+          <%= if @beacon_running do %>
+            <div class="badge badge-success badge-lg gap-2">
+              <span class="loading loading-ring loading-xs"></span>
+              TX #<%= @beacon_tx_count %>
+            </div>
+          <% end %>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div class="form-control">
+            <label class="label"><span class="label-text">Message</span></label>
+            <input
+              type="text"
+              value={@beacon_message}
+              phx-change="update_beacon_message"
+              name="message"
+              class="input input-bordered input-sm"
+              placeholder="PING"
+              disabled={@beacon_running}
+            />
+          </div>
+          <div class="form-control">
+            <label class="label"><span class="label-text">Interval (ms)</span></label>
+            <input
+              type="number"
+              value={@beacon_interval}
+              phx-change="update_beacon_interval"
+              name="interval"
+              class="input input-bordered input-sm"
+              min="500"
+              max="60000"
+              disabled={@beacon_running}
+            />
+          </div>
+        </div>
+        <div class="flex gap-2 mt-4">
+          <%= if @beacon_running do %>
+            <button phx-click="stop_beacon" class="btn btn-error">Stop Beacon</button>
+          <% else %>
+            <button phx-click="start_beacon" class="btn btn-success" disabled={!@lora_connected}>Start Beacon</button>
+          <% end %>
+        </div>
+      </div>
+    </div>
+
+    <!-- Ping Test -->
+    <div class="card bg-base-100 shadow-xl">
+      <div class="card-body">
+        <div class="flex items-center justify-between">
+          <h2 class="card-title">Ping Test</h2>
+          <%= if @ping_running do %>
+            <span class="loading loading-spinner loading-md text-primary"></span>
+          <% end %>
+        </div>
+        <p class="text-sm text-base-content/70">
+          Sends ping messages and measures RTT when echo response is received.
+          Requires responder in echo mode on the other device.
+        </p>
+        <div class="flex items-center gap-4 mt-2">
+          <div class="form-control">
+            <label class="label"><span class="label-text">Ping Count</span></label>
+            <input
+              type="number"
+              value={@ping_count}
+              phx-change="update_ping_count"
+              name="count"
+              class="input input-bordered input-sm w-24"
+              min="1"
+              max="100"
+              disabled={@ping_running}
+            />
+          </div>
+          <div class="flex-1"></div>
+          <button
+            phx-click="start_ping_test"
+            class="btn btn-primary"
+            disabled={!@lora_connected or @ping_running or @beacon_running}
+          >
+            Run Ping Test
+          </button>
+        </div>
+        <%= if @ping_stats do %>
+          <div class="stats shadow mt-4">
+            <div class="stat">
+              <div class="stat-title">Success</div>
+              <div class="stat-value text-success"><%= @ping_stats.success %>/<%= @ping_stats.total %></div>
+            </div>
+            <%= if @ping_stats.avg do %>
+              <div class="stat">
+                <div class="stat-title">Avg RTT</div>
+                <div class="stat-value"><%= @ping_stats.avg %></div>
+                <div class="stat-desc">ms</div>
+              </div>
+              <div class="stat">
+                <div class="stat-title">Min / Max</div>
+                <div class="stat-value text-sm"><%= @ping_stats.min %> / <%= @ping_stats.max %></div>
+                <div class="stat-desc">ms</div>
+              </div>
+            <% end %>
+          </div>
+        <% end %>
       </div>
     </div>
 

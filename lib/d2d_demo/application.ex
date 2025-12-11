@@ -15,6 +15,9 @@ defmodule D2dDemo.Application do
       D2dDemo.FileLogger,
       # LoRa serial communication
       D2dDemo.LoRa,
+      # LoRa test modes
+      D2dDemo.Beacon,
+      D2dDemo.Ping,
       # Network modules (WiFi, Bluetooth, Test Runner)
       D2dDemo.Network.WiFi,
       D2dDemo.Network.Bluetooth,

@@ -266,10 +266,19 @@ defmodule D2dDemo.LoRa do
     Circuits.UART.set_rts(uart, true)
     Process.sleep(500)
 
-    # Send break signal to reset module
+    # Send break signal to reset module (optional - may not be supported by all adapters)
+    # Note: circuits_uart has a bug where send_break raises MatchError on unsupported devices
     Logger.debug("LoRa: Sending break signal...")
-    Circuits.UART.send_break(uart, 250)
-    Process.sleep(300)
+    try do
+      case Circuits.UART.send_break(uart, 250) do
+        :ok -> Process.sleep(300)
+        {:error, _reason} ->
+          Logger.warning("LoRa: Break signal not supported by this adapter, skipping...")
+      end
+    rescue
+      MatchError ->
+        Logger.warning("LoRa: Break signal not supported by this adapter, skipping...")
+    end
 
     # Flush any garbage and send wake-up CRLFs
     Logger.debug("LoRa: Sending wake-up CRLFs...")
