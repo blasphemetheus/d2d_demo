@@ -352,6 +352,8 @@ defmodule D2dDemo.LoRa do
   end
 
   defp handle_async_response("radio_rx " <> hex) do
+    # Trim any extra whitespace - RN2903 sometimes sends "radio_rx  <hex>" with extra space
+    hex = String.trim(hex)
     case Base.decode16(hex, case: :mixed) do
       {:ok, data} ->
         D2dDemo.FileLogger.log_rx(data, hex)

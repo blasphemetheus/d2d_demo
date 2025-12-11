@@ -1,0 +1,10 @@
+{"message":"PING:2759","timestamp":"2025-12-11T10:58:29.906446Z","type":"lora","hex":"50494E473A32373539","direction":"tx"}
+{"timestamp":"2025-12-11T10:58:30.916548Z","type":"event","event":"tx_ok"}
+{"message":"PING:196","timestamp":"2025-12-11T10:58:40.424534Z","type":"lora","hex":"50494E473A313936","direction":"tx"}
+{"timestamp":"2025-12-11T10:58:41.431527Z","type":"event","event":"tx_ok"}
+{"message":"PING:1922","timestamp":"2025-12-11T10:58:50.941348Z","type":"lora","hex":"50494E473A31393232","direction":"tx"}
+{"timestamp":"2025-12-11T10:58:51.947022Z","type":"event","event":"tx_ok"}
+{"message":"PING:421","timestamp":"2025-12-11T10:59:01.458533Z","type":"lora","hex":"50494E473A343231","direction":"tx"}
+{"timestamp":"2025-12-11T10:59:02.465487Z","type":"event","event":"tx_ok"}
+{"message":"PING:323","timestamp":"2025-12-11T10:59:11.976580Z","type":"lora","hex":"50494E473A333233","direction":"tx"}
+{"timestamp":"2025-12-11T10:59:12.984084Z","type":"event","event":"tx_ok"}
