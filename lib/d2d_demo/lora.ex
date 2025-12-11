@@ -257,10 +257,25 @@ defmodule D2dDemo.LoRa do
   end
 
   defp wake_up_module(uart) do
+    # Toggle DTR and RTS to reset/wake the module
+    Logger.debug("LoRa: Toggling DTR/RTS to wake module...")
+    Circuits.UART.set_dtr(uart, false)
+    Circuits.UART.set_rts(uart, false)
+    Process.sleep(100)
+    Circuits.UART.set_dtr(uart, true)
+    Circuits.UART.set_rts(uart, true)
+    Process.sleep(500)
+
+    # Send break signal to reset module
+    Logger.debug("LoRa: Sending break signal...")
+    Circuits.UART.send_break(uart, 250)
+    Process.sleep(300)
+
     # Flush any garbage and send wake-up CRLFs
+    Logger.debug("LoRa: Sending wake-up CRLFs...")
     Circuits.UART.flush(uart)
     Circuits.UART.write(uart, "\r\n\r\n\r\n")
-    Process.sleep(100)
+    Process.sleep(200)
     Circuits.UART.flush(uart)
     drain_uart_messages()
 
