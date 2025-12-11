@@ -237,17 +237,81 @@ defmodule D2dDemo.LoRa do
 
     case Circuits.UART.open(uart, port, uart_opts) do
       :ok ->
-        # Flush any pending data and send wake-up sequence
-        Circuits.UART.flush(uart)
-        Circuits.UART.write(uart, "\r\n\r\n")
-        Process.sleep(200)
-        Circuits.UART.flush(uart)
+        # Wake up the module and verify communication
+        case wake_up_module(uart) do
+          {:ok, version} ->
+            Logger.info("Connected to #{port} - #{version}")
+            {:ok, %{state | uart: uart, port: port, connected: true, buffer: ""}}
 
-        {:ok, %{state | uart: uart, port: port, connected: true, buffer: ""}}
+          {:error, reason} ->
+            Logger.error("Failed to wake up LoRa module: #{inspect(reason)}")
+            Circuits.UART.close(uart)
+            Circuits.UART.stop(uart)
+            {:error, reason}
+        end
 
       {:error, reason} ->
         Circuits.UART.stop(uart)
         {:error, reason}
+    end
+  end
+
+  defp wake_up_module(uart) do
+    # Flush any garbage and send wake-up CRLFs
+    Circuits.UART.flush(uart)
+    Circuits.UART.write(uart, "\r\n\r\n\r\n")
+    Process.sleep(100)
+    Circuits.UART.flush(uart)
+    drain_uart_messages()
+
+    # Try to get version - first attempt often fails or returns invalid_param
+    # Retry up to 3 times
+    Enum.reduce_while(1..3, {:error, :no_response}, fn attempt, _acc ->
+      Logger.debug("Wake-up attempt #{attempt}")
+      Circuits.UART.write(uart, "sys get ver\r\n")
+
+      case wait_for_response(2000) do
+        {:ok, "RN" <> _ = version} ->
+          {:halt, {:ok, version}}
+
+        {:ok, "invalid_param"} ->
+          # First command often fails, try again
+          Process.sleep(100)
+          {:cont, {:error, :invalid_param}}
+
+        {:ok, other} ->
+          Logger.warning("Unexpected wake-up response: #{inspect(other)}")
+          Process.sleep(100)
+          {:cont, {:error, {:unexpected, other}}}
+
+        {:error, :timeout} ->
+          Process.sleep(200)
+          {:cont, {:error, :timeout}}
+      end
+    end)
+  end
+
+  defp wait_for_response(timeout) do
+    receive do
+      {:circuits_uart, _port, {:partial, _}} ->
+        # Ignore partials, keep waiting
+        wait_for_response(timeout)
+
+      {:circuits_uart, _port, data} when is_binary(data) ->
+        {:ok, String.trim(data)}
+
+      {:circuits_uart, _port, {:error, reason}} ->
+        {:error, reason}
+    after
+      timeout -> {:error, :timeout}
+    end
+  end
+
+  defp drain_uart_messages do
+    receive do
+      {:circuits_uart, _, _} -> drain_uart_messages()
+    after
+      0 -> :ok
     end
   end
 
