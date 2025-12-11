@@ -1,6 +1,6 @@
 defmodule D2dDemo.FileLogger do
   @moduledoc """
-  Logs LoRa TX/RX events to timestamped files for field data collection.
+  Logs LoRa TX/RX events and network tests to JSON Lines format for easy parsing.
   """
   use GenServer
   require Logger
@@ -42,7 +42,6 @@ defmodule D2dDemo.FileLogger do
     path = Path.join(@log_dir, filename)
     {:ok, file} = File.open(path, [:append, :utf8])
 
-    write_header(file)
     Logger.info("FileLogger: Writing to #{path}")
 
     {:ok, %{file: file, path: path}}
@@ -50,28 +49,44 @@ defmodule D2dDemo.FileLogger do
 
   @impl true
   def handle_cast({:log, direction, message, hex}, state) do
-    timestamp = DateTime.utc_now() |> DateTime.to_iso8601()
-    dir_str = if direction == :tx, do: "TX", else: "RX"
-    line = "#{timestamp}\t#{dir_str}\t#{inspect(message)}\t#{hex}\n"
-    IO.write(state.file, line)
+    entry = %{
+      timestamp: DateTime.utc_now() |> DateTime.to_iso8601(),
+      type: "lora",
+      direction: direction,
+      message: message,
+      hex: hex
+    }
+    write_json(state.file, entry)
     {:noreply, state}
   end
 
   @impl true
   def handle_cast({:log_event, event}, state) do
-    timestamp = DateTime.utc_now() |> DateTime.to_iso8601()
-    line = "#{timestamp}\tEVENT\t#{inspect(event)}\n"
-    IO.write(state.file, line)
+    entry = %{
+      timestamp: DateTime.utc_now() |> DateTime.to_iso8601(),
+      type: "event",
+      event: event
+    }
+    write_json(state.file, entry)
     {:noreply, state}
   end
 
   @impl true
   def handle_cast({:log_network_test, transport, test_type, result}, state) do
-    timestamp = DateTime.utc_now() |> DateTime.to_iso8601()
-    transport_str = transport |> to_string() |> String.upcase()
-    test_str = test_type |> to_string() |> String.upcase()
-    line = "#{timestamp}\t#{transport_str}\t#{test_str}\t#{inspect(result)}\n"
-    IO.write(state.file, line)
+    # Convert DateTime to ISO8601 string if present in result
+    result = Map.update(result, :timestamp, nil, fn
+      %DateTime{} = dt -> DateTime.to_iso8601(dt)
+      other -> other
+    end)
+
+    entry = %{
+      timestamp: DateTime.utc_now() |> DateTime.to_iso8601(),
+      type: "network_test",
+      transport: transport,
+      test_type: test_type,
+      result: result
+    }
+    write_json(state.file, entry)
     {:noreply, state}
   end
 
@@ -89,16 +104,14 @@ defmodule D2dDemo.FileLogger do
 
   defp generate_filename do
     {{year, month, day}, {hour, min, sec}} = :calendar.local_time()
-    "d2d_demo_#{year}#{pad(month)}#{pad(day)}_#{pad(hour)}#{pad(min)}#{pad(sec)}.log"
+    "d2d_demo_#{year}#{pad(month)}#{pad(day)}_#{pad(hour)}#{pad(min)}#{pad(sec)}.jsonl"
   end
 
   defp pad(n) when n < 10, do: "0#{n}"
   defp pad(n), do: "#{n}"
 
-  defp write_header(file) do
-    IO.write(file, "# D2D Demo Log\n")
-    IO.write(file, "# Started: #{DateTime.utc_now() |> DateTime.to_iso8601()}\n")
-    IO.write(file, "# Format: TIMESTAMP\tDIRECTION\tMESSAGE\tHEX\n")
-    IO.write(file, "#\n")
+  defp write_json(file, entry) do
+    json = Jason.encode!(entry)
+    IO.write(file, json <> "\n")
   end
 end
