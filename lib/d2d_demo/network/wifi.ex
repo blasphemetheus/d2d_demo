@@ -138,14 +138,58 @@ defmodule D2dDemo.Network.WiFi do
     script = scripts_path("wifi_setup.sh")
     args = [interface, @default_ssid, @default_freq, @default_ip]
 
+    Logger.info("WiFi: Running setup script: sudo #{script} #{Enum.join(args, " ")}")
+
     case System.cmd("sudo", [script | args], stderr_to_stdout: true) do
       {output, 0} ->
-        Logger.debug("WiFi setup output: #{output}")
-        :ok
+        Logger.info("WiFi setup script output: #{output}")
+        # Verify the setup actually worked
+        verify_setup(interface)
 
       {output, code} ->
         Logger.error("WiFi setup failed (exit #{code}): #{output}")
         {:error, output}
+    end
+  end
+
+  defp verify_setup(interface) do
+    # Check that interface is in IBSS mode and has correct IP
+    Process.sleep(500)  # Give interface time to settle
+
+    case System.cmd("iw", ["dev", interface, "info"], stderr_to_stdout: true) do
+      {output, 0} ->
+        Logger.info("WiFi interface info: #{output}")
+
+        cond do
+          String.contains?(output, "type ibss") or String.contains?(output, "type IBSS") ->
+            # Also verify IP is set
+            case System.cmd("ip", ["addr", "show", interface], stderr_to_stdout: true) do
+              {ip_output, 0} ->
+                if String.contains?(ip_output, @default_ip) do
+                  Logger.info("WiFi: Verified IBSS mode with IP #{@default_ip}")
+                  :ok
+                else
+                  Logger.error("WiFi: Interface in IBSS mode but IP not set. IP output: #{ip_output}")
+                  {:error, "IP address not configured"}
+                end
+
+              {ip_output, _} ->
+                Logger.error("WiFi: Failed to check IP: #{ip_output}")
+                {:error, "Failed to verify IP"}
+            end
+
+          String.contains?(output, "type managed") ->
+            Logger.error("WiFi: Interface still in managed mode, IBSS setup failed")
+            {:error, "Interface stuck in managed mode - try Reset NetworkManager first"}
+
+          true ->
+            Logger.warning("WiFi: Unknown interface type in output: #{output}")
+            {:error, "Unknown interface state"}
+        end
+
+      {output, code} ->
+        Logger.error("WiFi: Failed to get interface info (exit #{code}): #{output}")
+        {:error, "Failed to verify interface state"}
     end
   end
 
