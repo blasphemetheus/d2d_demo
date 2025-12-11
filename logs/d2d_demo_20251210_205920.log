@@ -1,0 +1,10 @@
+# D2D Demo Log
+# Started: 2025-12-11T02:59:20.245209Z
+# Format: TIMESTAMP	DIRECTION	MESSAGE	HEX
+#
+2025-12-11T02:59:50.359458Z	EVENT	"WIFI_CONNECTED: wlp0s20f3 at 192.168.12.2"
+2025-12-11T03:00:06.967850Z	WIFI	PING	%{timestamp: ~U[2025-12-11 03:00:06.967765Z], transport: :wifi, target_ip: "192.168.12.1", test_type: :ping, packet_loss_percent: 0.0, packets_received: 10, packets_sent: 10, rtt_avg_ms: 5.263, rtt_max_ms: 9.296, rtt_min_ms: 4.175, rtt_stddev_ms: 1.936}
+2025-12-11T03:00:54.896495Z	WIFI	THROUGHPUT	%{error: "iperf3 not found", timestamp: ~U[2025-12-11 03:00:54.896462Z], transport: :wifi, target_ip: "192.168.12.1", test_type: :throughput}
+2025-12-11T03:01:27.960711Z	EVENT	"WIFI_DISCONNECTED: wlp0s20f3"
+2025-12-11T03:01:30.399868Z	EVENT	"WIFI_RESET: NetworkManager restored"
+2025-12-11T03:03:35.349893Z	EVENT	"WIFI_RESET: NetworkManager restored"

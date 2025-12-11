@@ -1,0 +1,9 @@
+# D2D Demo Log
+# Started: 2025-12-11T03:05:51.592121Z
+# Format: TIMESTAMP	DIRECTION	MESSAGE	HEX
+#
+2025-12-11T03:05:59.159906Z	EVENT	"WIFI_CONNECTED: wlp0s20f3 at 192.168.12.2"
+2025-12-11T03:06:12.138742Z	WIFI	THROUGHPUT	%{timestamp: ~U[2025-12-11 03:06:12.138689Z], transport: :wifi, target_ip: "192.168.12.1", test_type: :throughput, bandwidth_mbps: 15.62, bytes_transferred: 19529728, duration_sec: 10, retransmits: 0}
+2025-12-11T03:07:03.297354Z	WIFI	THROUGHPUT	%{timestamp: ~U[2025-12-11 03:07:03.297315Z], transport: :wifi, target_ip: "192.168.12.1", test_type: :throughput, bandwidth_mbps: 17.3, bytes_transferred: 21626880, duration_sec: 10, retransmits: 0}
+2025-12-11T03:07:35.535467Z	EVENT	"WIFI_DISCONNECTED: wlp0s20f3"
+2025-12-11T03:07:37.138870Z	EVENT	"WIFI_RESET: NetworkManager restored"
