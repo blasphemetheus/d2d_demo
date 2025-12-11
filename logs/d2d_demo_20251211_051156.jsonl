@@ -1,0 +1,15 @@
+{"message":"PING:934","timestamp":"2025-12-11T11:13:53.948200Z","type":"lora","hex":"50494E473A393334","direction":"tx"}
+{"timestamp":"2025-12-11T11:13:54.955997Z","type":"event","event":"tx_ok"}
+{"message":"ECHO:PING:934","timestamp":"2025-12-11T11:13:56.200024Z","type":"lora","hex":"4543484F3A50494E473A393334","direction":"rx"}
+{"message":"PING:3490","timestamp":"2025-12-11T11:13:56.703141Z","type":"lora","hex":"50494E473A33343930","direction":"tx"}
+{"timestamp":"2025-12-11T11:13:57.710294Z","type":"event","event":"tx_ok"}
+{"message":"ECHO:PING:3490","timestamp":"2025-12-11T11:13:58.959964Z","type":"lora","hex":"4543484F3A50494E473A33343930","direction":"rx"}
+{"message":"PING:1190","timestamp":"2025-12-11T11:13:59.462439Z","type":"lora","hex":"50494E473A31313930","direction":"tx"}
+{"timestamp":"2025-12-11T11:14:00.469443Z","type":"event","event":"tx_ok"}
+{"message":"ECHO:PING:1190","timestamp":"2025-12-11T11:14:01.720585Z","type":"lora","hex":"4543484F3A50494E473A31313930","direction":"rx"}
+{"message":"PING:1222","timestamp":"2025-12-11T11:14:02.224229Z","type":"lora","hex":"50494E473A31323232","direction":"tx"}
+{"timestamp":"2025-12-11T11:14:03.231588Z","type":"event","event":"tx_ok"}
+{"message":"ECHO:PING:1222","timestamp":"2025-12-11T11:14:04.482412Z","type":"lora","hex":"4543484F3A50494E473A31323232","direction":"rx"}
+{"message":"PING:773","timestamp":"2025-12-11T11:14:04.985186Z","type":"lora","hex":"50494E473A373733","direction":"tx"}
+{"timestamp":"2025-12-11T11:14:05.992233Z","type":"event","event":"tx_ok"}
+{"message":"ECHO:PING:773","timestamp":"2025-12-11T11:14:07.240690Z","type":"lora","hex":"4543484F3A50494E473A373733","direction":"rx"}

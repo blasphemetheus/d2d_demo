@@ -18,6 +18,7 @@ defmodule D2dDemo.Application do
       # LoRa test modes
       D2dDemo.Beacon,
       D2dDemo.Ping,
+      D2dDemo.LoRaTestRunner,
       # Network modules (WiFi, Bluetooth, Test Runner)
       D2dDemo.Network.WiFi,
       D2dDemo.Network.Bluetooth,

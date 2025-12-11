@@ -3,7 +3,7 @@ defmodule D2dDemoWeb.DashboardLive do
   alias D2dDemo.LoRa
   alias D2dDemo.Network.{WiFi, Bluetooth, TestRunner}
 
-  alias D2dDemo.{Beacon, Ping}
+  alias D2dDemo.{Beacon, Ping, LoRaTestRunner}
 
   @impl true
   def mount(_params, _session, socket) do
@@ -17,6 +17,9 @@ defmodule D2dDemoWeb.DashboardLive do
       Phoenix.PubSub.subscribe(D2dDemo.PubSub, "beacon:tx")
       Phoenix.PubSub.subscribe(D2dDemo.PubSub, "ping:status")
       Phoenix.PubSub.subscribe(D2dDemo.PubSub, "ping:result")
+      Phoenix.PubSub.subscribe(D2dDemo.PubSub, "lora_test")
+      Phoenix.PubSub.subscribe(D2dDemo.PubSub, "lora_ping")
+      Phoenix.PubSub.subscribe(D2dDemo.PubSub, "lora_throughput")
     end
 
     {:ok,
@@ -40,7 +43,13 @@ defmodule D2dDemoWeb.DashboardLive do
        beacon_message: "PING",
        beacon_interval: "3000",
        beacon_tx_count: 0,
-       # Ping state
+       # LoRa Test state (new unified runner)
+       lora_test_running: safe_call(fn -> LoRaTestRunner.running?() end, false),
+       lora_test_type: nil,
+       lora_test_results: [],
+       lora_ping_count: "5",
+       lora_throughput_count: "10",
+       # Legacy ping state (kept for compatibility)
        ping_running: safe_call(fn -> Ping.running?() end, false),
        ping_count: "5",
        ping_results: [],
@@ -287,7 +296,7 @@ defmodule D2dDemoWeb.DashboardLive do
   end
 
   # ============================================
-  # Ping Events
+  # Ping Events (legacy - kept for compatibility)
   # ============================================
 
   @impl true
@@ -303,6 +312,50 @@ defmodule D2dDemoWeb.DashboardLive do
      socket
      |> assign(ping_running: true, ping_results: [], ping_stats: nil)
      |> add_log("Ping: Starting #{count} ping test...")}
+  end
+
+  # ============================================
+  # LoRa Test Events (new unified runner)
+  # ============================================
+
+  @impl true
+  def handle_event("update_lora_ping_count", %{"count" => count}, socket) do
+    {:noreply, assign(socket, lora_ping_count: count)}
+  end
+
+  @impl true
+  def handle_event("update_lora_throughput_count", %{"count" => count}, socket) do
+    {:noreply, assign(socket, lora_throughput_count: count)}
+  end
+
+  @impl true
+  def handle_event("start_lora_ping_test", _params, socket) do
+    count = String.to_integer(socket.assigns.lora_ping_count)
+    label = socket.assigns.test_label
+
+    Task.start(fn ->
+      LoRaTestRunner.run_ping(count, label: label)
+    end)
+
+    {:noreply,
+     socket
+     |> assign(lora_test_running: true, lora_test_type: :ping)
+     |> add_log("LoRa Ping: Starting #{count} ping test...")}
+  end
+
+  @impl true
+  def handle_event("start_lora_throughput_test", _params, socket) do
+    count = String.to_integer(socket.assigns.lora_throughput_count)
+    label = socket.assigns.test_label
+
+    Task.start(fn ->
+      LoRaTestRunner.run_throughput(count, label: label)
+    end)
+
+    {:noreply,
+     socket
+     |> assign(lora_test_running: true, lora_test_type: :throughput)
+     |> add_log("LoRa Throughput: Starting #{count} packet test...")}
   end
 
   # ============================================
@@ -544,6 +597,50 @@ defmodule D2dDemoWeb.DashboardLive do
     {:noreply,
      socket
      |> assign(ping_running: false, ping_stats: stats)
+     |> add_log(log_msg)}
+  end
+
+  # LoRa Test PubSub handlers (new unified runner)
+  # Note: {:test_started, ...} is handled by the generic handler above
+
+  @impl true
+  def handle_info({:lora_ping_result, result, current, total}, socket) do
+    log_msg = if result.rtt do
+      "LoRa Ping #{current}/#{total}: #{result.rtt}ms"
+    else
+      "LoRa Ping #{current}/#{total}: #{result.error || "timeout"}"
+    end
+    {:noreply, add_log(socket, log_msg)}
+  end
+
+  @impl true
+  def handle_info({:throughput_progress, current, total}, socket) do
+    {:noreply, add_log(socket, "LoRa Throughput: #{current}/#{total} packets sent")}
+  end
+
+  @impl true
+  def handle_info({:test_complete, :ping, %{transport: :lora} = result}, socket) do
+    log_msg = if result.rtt_avg_ms do
+      "LoRa Ping: #{result.packets_received}/#{result.packets_sent} success, avg=#{result.rtt_avg_ms}ms, loss=#{result.packet_loss_percent}%"
+    else
+      "LoRa Ping: 0/#{result.packets_sent} success (all failed)"
+    end
+
+    {:noreply,
+     socket
+     |> assign(lora_test_running: false, lora_test_type: nil)
+     |> update(:lora_test_results, fn results -> [result | Enum.take(results, 19)] end)
+     |> add_log(log_msg)}
+  end
+
+  @impl true
+  def handle_info({:test_complete, :throughput, %{transport: :lora} = result}, socket) do
+    log_msg = "LoRa Throughput: #{result.bandwidth_kbps} kbps, #{result.bytes_transferred} bytes in #{result.duration_ms}ms"
+
+    {:noreply,
+     socket
+     |> assign(lora_test_running: false, lora_test_type: nil)
+     |> update(:lora_test_results, fn results -> [result | Enum.take(results, 19)] end)
      |> add_log(log_msg)}
   end
 
@@ -835,64 +932,67 @@ defmodule D2dDemoWeb.DashboardLive do
       </div>
     </div>
 
-    <!-- Ping Test -->
+    <!-- LoRa Tests (matching WiFi/BT style) -->
     <div class="card bg-base-100 shadow-xl">
       <div class="card-body">
-        <div class="flex items-center justify-between">
-          <h2 class="card-title">Ping Test</h2>
-          <%= if @ping_running do %>
-            <span class="loading loading-spinner loading-md text-primary"></span>
-          <% end %>
-        </div>
+        <h2 class="card-title">LoRa Tests</h2>
         <p class="text-sm text-base-content/70">
-          Sends ping messages and measures RTT when echo response is received.
-          Requires responder in echo mode on the other device.
+          Requires responder in echo mode. Measures RTT and throughput.
         </p>
-        <div class="flex items-center gap-4 mt-2">
+        <div class="flex items-center gap-4 mt-2 flex-wrap">
           <div class="form-control">
-            <label class="label"><span class="label-text">Ping Count</span></label>
+            <label class="label"><span class="label-text">Pings</span></label>
             <input
               type="number"
-              value={@ping_count}
-              phx-change="update_ping_count"
+              value={@lora_ping_count}
+              phx-change="update_lora_ping_count"
               name="count"
-              class="input input-bordered input-sm w-24"
+              class="input input-bordered input-sm w-20"
               min="1"
               max="100"
-              disabled={@ping_running}
+              disabled={@lora_test_running}
+            />
+          </div>
+          <div class="form-control">
+            <label class="label"><span class="label-text">Packets</span></label>
+            <input
+              type="number"
+              value={@lora_throughput_count}
+              phx-change="update_lora_throughput_count"
+              name="count"
+              class="input input-bordered input-sm w-20"
+              min="1"
+              max="50"
+              disabled={@lora_test_running}
             />
           </div>
           <div class="flex-1"></div>
           <button
-            phx-click="start_ping_test"
+            phx-click="start_lora_ping_test"
             class="btn btn-primary"
-            disabled={!@lora_connected or @ping_running or @beacon_running}
+            disabled={!@lora_connected or @lora_test_running or @beacon_running}
           >
+            <%= if @lora_test_running and @lora_test_type == :ping do %>
+              <span class="loading loading-spinner loading-sm"></span>
+            <% end %>
             Run Ping Test
           </button>
-        </div>
-        <%= if @ping_stats do %>
-          <div class="stats shadow mt-4">
-            <div class="stat">
-              <div class="stat-title">Success</div>
-              <div class="stat-value text-success"><%= @ping_stats.success %>/<%= @ping_stats.total %></div>
-            </div>
-            <%= if @ping_stats.avg do %>
-              <div class="stat">
-                <div class="stat-title">Avg RTT</div>
-                <div class="stat-value"><%= @ping_stats.avg %></div>
-                <div class="stat-desc">ms</div>
-              </div>
-              <div class="stat">
-                <div class="stat-title">Min / Max</div>
-                <div class="stat-value text-sm"><%= @ping_stats.min %> / <%= @ping_stats.max %></div>
-                <div class="stat-desc">ms</div>
-              </div>
+          <button
+            phx-click="start_lora_throughput_test"
+            class="btn btn-secondary"
+            disabled={!@lora_connected or @lora_test_running or @beacon_running}
+          >
+            <%= if @lora_test_running and @lora_test_type == :throughput do %>
+              <span class="loading loading-spinner loading-sm"></span>
             <% end %>
-          </div>
-        <% end %>
+            Run Throughput Test
+          </button>
+        </div>
       </div>
     </div>
+
+    <!-- LoRa Test Results -->
+    <.lora_test_results_table results={@lora_test_results} />
 
     <!-- Received Messages -->
     <%= if @rx_messages != [] do %>
@@ -1092,4 +1192,59 @@ defmodule D2dDemoWeb.DashboardLive do
   end
 
   defp format_route(_), do: "-"
+
+  # LoRa-specific results table
+  defp lora_test_results_table(assigns) do
+    ~H"""
+    <%= if @results != [] do %>
+      <div class="card bg-base-100 shadow-xl">
+        <div class="card-body">
+          <h2 class="card-title">LoRa Test Results</h2>
+          <div class="overflow-x-auto max-h-64">
+            <table class="table table-zebra table-sm">
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>Label</th>
+                  <th>Test</th>
+                  <th>Sent</th>
+                  <th>Recv</th>
+                  <th>Loss %</th>
+                  <th>RTT (ms)</th>
+                  <th>Throughput</th>
+                </tr>
+              </thead>
+              <tbody>
+                <%= for result <- @results do %>
+                  <tr>
+                    <td><%= Calendar.strftime(result.timestamp, "%H:%M:%S") %></td>
+                    <td class="font-mono text-xs"><%= Map.get(result, :label, "") %></td>
+                    <td><%= result.test_type %></td>
+                    <td><%= Map.get(result, :packets_sent) || "-" %></td>
+                    <td><%= Map.get(result, :packets_received) || Map.get(result, :packets_successful) || "-" %></td>
+                    <td><%= if Map.get(result, :packet_loss_percent), do: "#{result.packet_loss_percent}%", else: "-" %></td>
+                    <td>
+                      <%= if result.test_type == :ping and result.rtt_avg_ms do %>
+                        <%= result.rtt_avg_ms %> (<%= result.rtt_min_ms %>-<%= result.rtt_max_ms %>)
+                      <% else %>
+                        -
+                      <% end %>
+                    </td>
+                    <td>
+                      <%= if result.test_type == :throughput do %>
+                        <%= Map.get(result, :bandwidth_kbps, 0) %> kbps
+                      <% else %>
+                        -
+                      <% end %>
+                    </td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    <% end %>
+    """
+  end
 end
