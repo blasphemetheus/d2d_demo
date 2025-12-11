@@ -42,7 +42,7 @@ Open http://localhost:4000 in your browser.
 
 ### Dashboard Tabs
 
-- **LoRa**: Connect to RN2483 module, configure radio settings, send/receive messages
+- **LoRa**: Connect to RN2903 module, configure radio settings, send/receive messages
 - **WiFi**: Connect to Pi via WiFi ad-hoc, run ping and throughput tests
 - **Bluetooth**: Connect to Pi via Bluetooth PAN, run ping and throughput tests
 

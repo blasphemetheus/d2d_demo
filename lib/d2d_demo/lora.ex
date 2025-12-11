@@ -1,7 +1,10 @@
 defmodule D2dDemo.LoRa do
   @moduledoc """
-  GenServer for managing RN2483 LoRa module via serial port.
+  GenServer for managing RN2903 LoRa module via serial port.
   Handles raw radio TX/RX operations.
+
+  The RN2903 uses 57600 baud, 8N1, and requires CRLF line endings
+  for both commands and responses.
   """
   use GenServer
   require Logger
@@ -117,29 +120,33 @@ defmodule D2dDemo.LoRa do
   end
 
   @impl true
+  def handle_info({:circuits_uart, _port, {:partial, partial}}, state) do
+    # Partial line received (framing mode)
+    Logger.debug("UART partial: #{inspect(partial)}")
+    {:noreply, state}
+  end
+
+  @impl true
   def handle_info({:circuits_uart, _port, data}, state) when is_binary(data) do
-    new_buffer = state.buffer <> data
+    # With line framing, we get complete lines
+    response = String.trim(data)
+    Logger.debug("UART RX: #{inspect(response)}")
 
-    # Check for complete response (ends with \r\n)
-    case String.split(new_buffer, "\r\n", parts: 2) do
-      [response, rest] ->
-        response = String.trim(response)
+    if response != "" do
+      # Notify pending caller if any
+      if state.pending_response do
+        GenServer.reply(state.pending_response, {:ok, response})
+      end
 
-        # Notify pending caller if any
-        if state.pending_response do
-          GenServer.reply(state.pending_response, {:ok, response})
-        end
+      # Broadcast to subscribers (for LiveView updates)
+      broadcast_response(response, state.subscribers)
 
-        # Broadcast to subscribers (for LiveView updates)
-        broadcast_response(response, state.subscribers)
+      # Handle async responses like "radio_rx <hex>"
+      handle_async_response(response)
 
-        # Handle async responses like "radio_rx <hex>"
-        handle_async_response(response)
-
-        {:noreply, %{state | buffer: rest, pending_response: nil}}
-
-      [_incomplete] ->
-        {:noreply, %{state | buffer: new_buffer}}
+      {:noreply, %{state | pending_response: nil}}
+    else
+      {:noreply, state}
     end
   end
 
@@ -173,8 +180,10 @@ defmodule D2dDemo.LoRa do
   @impl true
   def handle_call({:send_command, cmd}, from, state) do
     if state.connected do
+      Logger.debug("UART TX: #{inspect(cmd)}")
+      # RN2903 expects commands terminated with CRLF
       Circuits.UART.write(state.uart, "#{cmd}\r\n")
-      {:noreply, %{state | pending_response: from, buffer: ""}}
+      {:noreply, %{state | pending_response: from}}
     else
       {:reply, {:error, :not_connected}, state}
     end
@@ -215,11 +224,24 @@ defmodule D2dDemo.LoRa do
 
     {:ok, uart} = Circuits.UART.start_link()
 
-    case Circuits.UART.open(uart, port, speed: @default_baud, active: true) do
+    # RN2903 settings: 57600 baud, 8N1, no flow control, CRLF line endings
+    uart_opts = [
+      speed: @default_baud,
+      data_bits: 8,
+      stop_bits: 1,
+      parity: :none,
+      flow_control: :none,
+      active: true,
+      framing: {Circuits.UART.Framing.Line, separator: "\r\n"}
+    ]
+
+    case Circuits.UART.open(uart, port, uart_opts) do
       :ok ->
-        # Flush any pending data
+        # Flush any pending data and send wake-up sequence
         Circuits.UART.flush(uart)
-        Process.sleep(100)
+        Circuits.UART.write(uart, "\r\n\r\n")
+        Process.sleep(200)
+        Circuits.UART.flush(uart)
 
         {:ok, %{state | uart: uart, port: port, connected: true, buffer: ""}}
 
