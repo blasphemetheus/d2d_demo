@@ -1,0 +1,4 @@
+{"message":"sys get ver","timestamp":"2025-12-11T08:50:15.760854Z","type":"lora","hex":"7379732067657420766572","direction":"tx"}
+{"timestamp":"2025-12-11T08:50:16.932387Z","type":"event","event":"tx_ok"}
+{"message":"sdfsdf","timestamp":"2025-12-11T08:50:19.921601Z","type":"lora","hex":"736466736466","direction":"tx"}
+{"timestamp":"2025-12-11T08:50:20.926446Z","type":"event","event":"tx_ok"}

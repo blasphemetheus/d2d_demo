@@ -20,8 +20,10 @@ defmodule D2dDemoWeb.DashboardLive do
        # LoRa state
        lora_connected: safe_call(fn -> LoRa.connected?() end, false),
        lora_port: "/dev/ttyACM0",
+       lora_version: nil,
        radio_settings: nil,
        tx_message: "",
+       raw_cmd: "",
        rx_messages: [],
        frequency: "915000000",
        spreading_factor: "7",
@@ -70,13 +72,25 @@ defmodule D2dDemoWeb.DashboardLive do
   def handle_event("connect_lora", _params, socket) do
     case LoRa.connect(socket.assigns.lora_port) do
       :ok ->
+        # Get version
+        version = case LoRa.send_command("sys get ver") do
+          {:ok, ver} -> ver
+          _ -> "Unknown"
+        end
+
+        # Pause MAC for raw radio access
         LoRa.pause_mac()
-        {:ok, settings} = LoRa.get_radio_settings()
+
+        # Get current settings
+        settings = case LoRa.get_radio_settings() do
+          {:ok, s} -> s
+          _ -> nil
+        end
 
         {:noreply,
          socket
-         |> assign(lora_connected: true, radio_settings: settings)
-         |> add_log("LoRa: Connected to #{socket.assigns.lora_port}")}
+         |> assign(lora_connected: true, lora_version: version, radio_settings: settings)
+         |> add_log("LoRa: Connected to #{socket.assigns.lora_port} - #{version}")}
 
       {:error, reason} ->
         {:noreply, add_log(socket, "LoRa: Connection failed: #{inspect(reason)}")}
@@ -88,7 +102,7 @@ defmodule D2dDemoWeb.DashboardLive do
     LoRa.disconnect()
     {:noreply,
      socket
-     |> assign(lora_connected: false, radio_settings: nil)
+     |> assign(lora_connected: false, lora_version: nil, radio_settings: nil)
      |> add_log("LoRa: Disconnected")}
   end
 
@@ -173,10 +187,46 @@ defmodule D2dDemoWeb.DashboardLive do
   end
 
   @impl true
+  def handle_event("update_raw_cmd", %{"cmd" => cmd}, socket) do
+    {:noreply, assign(socket, raw_cmd: cmd)}
+  end
+
+  @impl true
   def handle_event("send_raw_cmd", %{"cmd" => cmd}, socket) do
+    cmd = String.trim(cmd)
+    if cmd != "" do
+      case LoRa.send_command(cmd) do
+        {:ok, response} ->
+          {:noreply,
+           socket
+           |> assign(raw_cmd: "")
+           |> add_log("> #{cmd}\n< #{response}")}
+        {:error, reason} ->
+          {:noreply, add_log(socket, "> #{cmd}\nError: #{inspect(reason)}")}
+      end
+    else
+      {:noreply, socket}
+    end
+  end
+
+  @impl true
+  def handle_event("quick_cmd", %{"cmd" => cmd}, socket) do
     case LoRa.send_command(cmd) do
       {:ok, response} -> {:noreply, add_log(socket, "> #{cmd}\n< #{response}")}
-      {:error, reason} -> {:noreply, add_log(socket, "Error: #{inspect(reason)}")}
+      {:error, reason} -> {:noreply, add_log(socket, "> #{cmd}\nError: #{inspect(reason)}")}
+    end
+  end
+
+  @impl true
+  def handle_event("refresh_settings", _params, socket) do
+    case LoRa.get_radio_settings() do
+      {:ok, settings} ->
+        {:noreply,
+         socket
+         |> assign(radio_settings: settings)
+         |> add_log("LoRa: Settings refreshed")}
+      {:error, reason} ->
+        {:noreply, add_log(socket, "Error refreshing settings: #{inspect(reason)}")}
     end
   end
 
@@ -495,7 +545,7 @@ defmodule D2dDemoWeb.DashboardLive do
     <!-- Connection -->
     <div class="card bg-base-100 shadow-xl">
       <div class="card-body">
-        <div class="flex items-center gap-4">
+        <div class="flex items-center gap-4 flex-wrap">
           <div class={"badge badge-lg " <> if(@lora_connected, do: "badge-success", else: "badge-error")}>
             <%= if @lora_connected, do: "Connected", else: "Disconnected" %>
           </div>
@@ -512,6 +562,38 @@ defmodule D2dDemoWeb.DashboardLive do
           <% else %>
             <button phx-click="connect_lora" class="btn btn-primary btn-sm">Connect</button>
           <% end %>
+          <%= if @lora_version do %>
+            <span class="text-sm font-mono text-base-content/70"><%= @lora_version %></span>
+          <% end %>
+        </div>
+      </div>
+    </div>
+
+    <!-- Raw Command & Quick Actions -->
+    <div class="card bg-base-100 shadow-xl">
+      <div class="card-body">
+        <h2 class="card-title">Raw Commands</h2>
+        <form phx-submit="send_raw_cmd" class="flex gap-2">
+          <input
+            type="text"
+            name="cmd"
+            value={@raw_cmd}
+            phx-change="update_raw_cmd"
+            class="input input-bordered input-sm flex-1 font-mono"
+            placeholder="sys get ver"
+            disabled={!@lora_connected}
+          />
+          <button type="submit" class="btn btn-primary btn-sm" disabled={!@lora_connected}>Send</button>
+        </form>
+        <div class="flex flex-wrap gap-2 mt-2">
+          <span class="text-sm text-base-content/70">Quick:</span>
+          <button phx-click="quick_cmd" phx-value-cmd="sys get ver" class="btn btn-xs btn-outline" disabled={!@lora_connected}>sys get ver</button>
+          <button phx-click="quick_cmd" phx-value-cmd="mac pause" class="btn btn-xs btn-outline" disabled={!@lora_connected}>mac pause</button>
+          <button phx-click="quick_cmd" phx-value-cmd="radio get freq" class="btn btn-xs btn-outline" disabled={!@lora_connected}>radio get freq</button>
+          <button phx-click="quick_cmd" phx-value-cmd="radio get sf" class="btn btn-xs btn-outline" disabled={!@lora_connected}>radio get sf</button>
+          <button phx-click="quick_cmd" phx-value-cmd="radio get bw" class="btn btn-xs btn-outline" disabled={!@lora_connected}>radio get bw</button>
+          <button phx-click="quick_cmd" phx-value-cmd="radio get pwr" class="btn btn-xs btn-outline" disabled={!@lora_connected}>radio get pwr</button>
+          <button phx-click="quick_cmd" phx-value-cmd="radio rx 0" class="btn btn-xs btn-outline btn-secondary" disabled={!@lora_connected}>radio rx 0</button>
         </div>
       </div>
     </div>
@@ -519,13 +601,22 @@ defmodule D2dDemoWeb.DashboardLive do
     <!-- Radio Settings -->
     <div class="card bg-base-100 shadow-xl">
       <div class="card-body">
-        <h2 class="card-title">Radio Settings</h2>
+        <div class="flex items-center justify-between">
+          <h2 class="card-title">Radio Settings</h2>
+          <button phx-click="refresh_settings" class="btn btn-xs btn-ghost" disabled={!@lora_connected}>Refresh</button>
+        </div>
+        <%= if @radio_settings do %>
+          <div class="text-xs font-mono bg-base-200 p-2 rounded mb-2">
+            Current: <%= @radio_settings.frequency %> Hz | <%= @radio_settings.spreading_factor %> | <%= @radio_settings.bandwidth %> kHz | <%= @radio_settings.power %> dBm | <%= @radio_settings.modulation %>
+          </div>
+        <% end %>
         <div class="grid grid-cols-2 gap-4">
           <div class="form-control">
             <label class="label"><span class="label-text">Frequency</span></label>
             <select class="select select-bordered" phx-change="set_frequency" name="frequency" disabled={!@lora_connected}>
               <option value="868100000" selected={@frequency == "868100000"}>868.1 MHz (EU)</option>
               <option value="915000000" selected={@frequency == "915000000"}>915.0 MHz (US)</option>
+              <option value="923300000" selected={@frequency == "923300000"}>923.3 MHz (US)</option>
             </select>
           </div>
           <div class="form-control">
