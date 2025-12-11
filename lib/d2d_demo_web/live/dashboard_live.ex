@@ -585,16 +585,18 @@ defmodule D2dDemoWeb.DashboardLive do
           />
           <button type="submit" class="btn btn-primary btn-sm" disabled={!@lora_connected}>Send</button>
         </form>
-        <div class="flex flex-wrap gap-2 mt-2">
+        <div class="mt-2">
           <span class="text-sm text-base-content/70">Quick:</span>
-          <button phx-click="quick_cmd" phx-value-cmd="sys get ver" class="btn btn-xs btn-outline" disabled={!@lora_connected}>sys get ver</button>
-          <button phx-click="quick_cmd" phx-value-cmd="mac pause" class="btn btn-xs btn-outline" disabled={!@lora_connected}>mac pause</button>
-          <button phx-click="quick_cmd" phx-value-cmd="radio get freq" class="btn btn-xs btn-outline" disabled={!@lora_connected}>radio get freq</button>
-          <button phx-click="quick_cmd" phx-value-cmd="radio get sf" class="btn btn-xs btn-outline" disabled={!@lora_connected}>radio get sf</button>
-          <button phx-click="quick_cmd" phx-value-cmd="radio get bw" class="btn btn-xs btn-outline" disabled={!@lora_connected}>radio get bw</button>
-          <button phx-click="quick_cmd" phx-value-cmd="radio get pwr" class="btn btn-xs btn-outline" disabled={!@lora_connected}>radio get pwr</button>
-          <button phx-click="quick_cmd" phx-value-cmd="radio rx 0" class="btn btn-xs btn-outline btn-secondary" disabled={!@lora_connected}>radio rx 0</button>
-          <button phx-click="quick_cmd" phx-value-cmd="radio rxstop" class="btn btn-xs btn-outline btn-warning" disabled={!@lora_connected}>radio rxstop</button>
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-1 mt-1">
+            <button phx-click="quick_cmd" phx-value-cmd="sys get ver" class="btn btn-xs btn-outline" disabled={!@lora_connected}>sys get ver</button>
+            <button phx-click="quick_cmd" phx-value-cmd="mac pause" class="btn btn-xs btn-outline" disabled={!@lora_connected}>mac pause</button>
+            <button phx-click="quick_cmd" phx-value-cmd="radio get freq" class="btn btn-xs btn-outline" disabled={!@lora_connected}>get freq</button>
+            <button phx-click="quick_cmd" phx-value-cmd="radio get sf" class="btn btn-xs btn-outline" disabled={!@lora_connected}>get sf</button>
+            <button phx-click="quick_cmd" phx-value-cmd="radio get bw" class="btn btn-xs btn-outline" disabled={!@lora_connected}>get bw</button>
+            <button phx-click="quick_cmd" phx-value-cmd="radio get pwr" class="btn btn-xs btn-outline" disabled={!@lora_connected}>get pwr</button>
+            <button phx-click="quick_cmd" phx-value-cmd="radio rx 0" class="btn btn-xs btn-outline btn-secondary" disabled={!@lora_connected}>rx 0</button>
+            <button phx-click="quick_cmd" phx-value-cmd="radio rxstop" class="btn btn-xs btn-outline btn-warning" disabled={!@lora_connected}>rxstop</button>
+          </div>
         </div>
       </div>
     </div>
