@@ -29,16 +29,22 @@ import topbar from "../vendor/topbar"
 const Hooks = {
   PersistLabel: {
     mounted() {
+      console.log("PersistLabel hook mounted")
       // Restore label from localStorage on mount
       const savedLabel = localStorage.getItem("d2d_test_label")
-      if (savedLabel && savedLabel !== this.el.value) {
+      console.log("Saved label from localStorage:", savedLabel)
+      if (savedLabel) {
         this.el.value = savedLabel
-        // Push to server
-        this.pushEvent("update_test_label", {label: savedLabel})
+        // Push to server after a small delay to ensure LiveView is ready
+        setTimeout(() => {
+          console.log("Pushing label to server:", savedLabel)
+          this.pushEvent("update_test_label", {label: savedLabel})
+        }, 100)
       }
 
       // Save to localStorage on input
       this.el.addEventListener("input", (e) => {
+        console.log("Saving label to localStorage:", e.target.value)
         localStorage.setItem("d2d_test_label", e.target.value)
       })
     }
