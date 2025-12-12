@@ -358,6 +358,41 @@ defmodule D2dDemoWeb.DashboardLive do
      |> add_log("LoRa Throughput: Starting #{count} packet test...")}
   end
 
+  @impl true
+  def handle_event("run_field_test", _params, socket) do
+    label = socket.assigns.test_label
+    if label == "" do
+      {:noreply, add_log(socket, "Field Test: Please enter a label first (e.g., '100m')")}
+    else
+      count = String.to_integer(socket.assigns.lora_ping_count)
+
+      Task.start(fn ->
+        LoRaTestRunner.run_ping(count, label: label)
+      end)
+
+      {:noreply,
+       socket
+       |> assign(lora_test_running: true, lora_test_type: :ping)
+       |> add_log("Field Test [#{label}]: Running #{count} pings...")}
+    end
+  end
+
+  @impl true
+  def handle_event("check_connection", _params, socket) do
+    socket = add_log(socket, "Checking connection...")
+
+    Task.start(fn ->
+      case LoRaTestRunner.run_ping(1, timeout: 5_000) do
+        %{packets_received: 1, rtt_avg_ms: rtt} ->
+          Phoenix.PubSub.broadcast(D2dDemo.PubSub, "lora_test", {:connection_check, :ok, rtt})
+        _ ->
+          Phoenix.PubSub.broadcast(D2dDemo.PubSub, "lora_test", {:connection_check, :error, nil})
+      end
+    end)
+
+    {:noreply, assign(socket, lora_test_running: true, lora_test_type: :check)}
+  end
+
   # ============================================
   # WiFi Events
   # ============================================
@@ -641,6 +676,22 @@ defmodule D2dDemoWeb.DashboardLive do
      |> assign(lora_test_running: false, lora_test_type: nil)
      |> update(:lora_test_results, fn results -> [result | Enum.take(results, 19)] end)
      |> add_log(log_msg)}
+  end
+
+  @impl true
+  def handle_info({:connection_check, :ok, rtt}, socket) do
+    {:noreply,
+     socket
+     |> assign(lora_test_running: false, lora_test_type: nil)
+     |> add_log("✓ Connection OK! RTT: #{rtt}ms")}
+  end
+
+  @impl true
+  def handle_info({:connection_check, :error, _}, socket) do
+    {:noreply,
+     socket
+     |> assign(lora_test_running: false, lora_test_type: nil)
+     |> add_log("✗ No response from remote")}
   end
 
   defp format_test_result(%{error: error} = r) do
@@ -928,6 +979,46 @@ defmodule D2dDemoWeb.DashboardLive do
             <button phx-click="start_beacon" class="btn btn-success" disabled={!@lora_connected}>Start Beacon</button>
           <% end %>
         </div>
+      </div>
+    </div>
+
+    <!-- Field Testing -->
+    <div class="card bg-base-100 shadow-xl bg-gradient-to-r from-base-100 to-primary/10">
+      <div class="card-body">
+        <h2 class="card-title">Field Testing</h2>
+        <p class="text-sm text-base-content/70">
+          Quick actions for field testing. Set the label above to your current distance/location.
+        </p>
+        <div class="flex items-center gap-4 mt-2 flex-wrap">
+          <button
+            phx-click="check_connection"
+            class="btn btn-outline btn-info"
+            disabled={!@lora_connected or @lora_test_running}
+          >
+            <%= if @lora_test_running and @lora_test_type == :check do %>
+              <span class="loading loading-spinner loading-sm"></span>
+            <% end %>
+            Check Connection
+          </button>
+          <button
+            phx-click="run_field_test"
+            class="btn btn-success btn-lg"
+            disabled={!@lora_connected or @lora_test_running or @beacon_running}
+          >
+            <%= if @lora_test_running and @lora_test_type == :ping do %>
+              <span class="loading loading-spinner loading-sm"></span>
+            <% end %>
+            Run Field Test
+            <%= if @test_label != "" do %>
+              <span class="badge badge-neutral ml-2"><%= @test_label %></span>
+            <% end %>
+          </button>
+        </div>
+        <%= if @test_label == "" do %>
+          <div class="text-warning text-sm mt-2">
+            ⚠️ Enter a label above (e.g., "100m", "500m") before running field test
+          </div>
+        <% end %>
       </div>
     </div>
 
