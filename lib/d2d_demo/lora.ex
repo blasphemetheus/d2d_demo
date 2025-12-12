@@ -241,7 +241,10 @@ defmodule D2dDemo.LoRa do
         case wake_up_module(uart) do
           {:ok, version} ->
             Logger.info("Connected to #{port} - #{version}")
-            {:ok, %{state | uart: uart, port: port, connected: true, buffer: ""}}
+            new_state = %{state | uart: uart, port: port, connected: true, buffer: ""}
+            # Configure radio defaults to match SX1276/Dragino HAT
+            configure_radio_defaults(new_state)
+            {:ok, new_state}
 
           {:error, reason} ->
             Logger.error("Failed to wake up LoRa module: #{inspect(reason)}")
@@ -375,4 +378,54 @@ defmodule D2dDemo.LoRa do
   end
 
   defp handle_async_response(_other), do: :ok
+
+  # Configure radio to match SX1276/Dragino HAT defaults
+  defp configure_radio_defaults(state) do
+    Logger.info("LoRa: Configuring radio defaults to match SX1276...")
+
+    # Pause MAC layer to allow raw radio commands
+    send_cmd(state.uart, "mac pause")
+    Process.sleep(100)
+
+    # Set frequency to 915 MHz (US ISM band)
+    send_cmd(state.uart, "radio set freq 915000000")
+    Process.sleep(50)
+
+    # Set spreading factor to SF7
+    send_cmd(state.uart, "radio set sf sf7")
+    Process.sleep(50)
+
+    # Set bandwidth to 125 kHz
+    send_cmd(state.uart, "radio set bw 125")
+    Process.sleep(50)
+
+    # Set coding rate to 4/5
+    send_cmd(state.uart, "radio set cr 4/5")
+    Process.sleep(50)
+
+    # Set sync word to 0x34 (matches SX1276 default for compatibility)
+    send_cmd(state.uart, "radio set sync 34")
+    Process.sleep(50)
+
+    # Enable CRC
+    send_cmd(state.uart, "radio set crc on")
+    Process.sleep(50)
+
+    # Drain any responses
+    drain_uart_messages()
+
+    Logger.info("LoRa: Radio configured - 915MHz, SF7, BW125, CR4/5, Sync=0x34, CRC=on")
+  end
+
+  defp send_cmd(uart, cmd) do
+    Logger.debug("Config TX: #{cmd}")
+    Circuits.UART.write(uart, "#{cmd}\r\n")
+    # Wait for response
+    receive do
+      {:circuits_uart, _port, data} ->
+        Logger.debug("Config RX: #{String.trim(data)}")
+    after
+      500 -> Logger.warning("No response for: #{cmd}")
+    end
+  end
 end
