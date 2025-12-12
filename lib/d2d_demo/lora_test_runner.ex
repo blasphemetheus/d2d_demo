@@ -196,8 +196,10 @@ defmodule D2dDemo.LoRaTestRunner do
 
   @impl true
   def handle_info(:tx_ok, %{waiting_for_tx_ok: true, test_type: :ping} = state) do
-    # TX done, enter RX mode
-    LoRa.receive_mode(0)
+    # TX done, enter RX mode with timeout matching ping timeout
+    # Don't use 0 (continuous) - radio won't exit RX mode on software timeout
+    timeout = Keyword.get(state.opts, :timeout, @default_ping_timeout)
+    LoRa.receive_mode(timeout)
     {:noreply, %{state | waiting_for_tx_ok: false}}
   end
 
