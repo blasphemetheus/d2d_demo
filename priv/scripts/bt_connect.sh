@@ -37,17 +37,27 @@ fi
 bt-device -d "$MAC" 2>/dev/null || true
 sleep 0.5
 
-# Power on, pair and trust
+# Power on and connect (skip pairing if already paired)
 echo "Setting up Bluetooth..."
-bluetoothctl << EOF
+# Quick check if already paired
+PAIRED=$(bluetoothctl info "$MAC" 2>/dev/null | grep -c "Paired: yes" || echo "0")
+
+if [ "$PAIRED" = "0" ]; then
+    echo "Device not paired, pairing first..."
+    bluetoothctl << EOF
 power on
 agent on
 default-agent
 trust $MAC
 pair $MAC
-connect $MAC
 quit
 EOF
+    sleep 3
+fi
+
+# Just connect (faster if already paired)
+echo "Connecting to $MAC..."
+bluetoothctl connect "$MAC" &
 sleep 2
 
 # Check if bt-network is available

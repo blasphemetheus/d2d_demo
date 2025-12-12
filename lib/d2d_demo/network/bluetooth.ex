@@ -143,7 +143,7 @@ defmodule D2dDemo.Network.Bluetooth do
       System.cmd("sudo", [script, peer_mac, ip], stderr_to_stdout: true)
     end)
 
-    case Task.yield(task, 45_000) || Task.shutdown(task) do
+    case Task.yield(task, 60_000) || Task.shutdown(task) do
       {:ok, {output, 0}} ->
         Logger.info("Bluetooth connect output: #{output}")
         :ok
@@ -153,7 +153,7 @@ defmodule D2dDemo.Network.Bluetooth do
         {:error, output}
 
       nil ->
-        Logger.error("Bluetooth connect timed out after 45 seconds")
+        Logger.error("Bluetooth connect timed out after 60 seconds")
         {:error, "Connection timed out"}
     end
   end
