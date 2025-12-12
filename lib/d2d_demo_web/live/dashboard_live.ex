@@ -364,16 +364,22 @@ defmodule D2dDemoWeb.DashboardLive do
     if label == "" do
       {:noreply, add_log(socket, "Field Test: Please enter a label first (e.g., '100m')")}
     else
-      count = String.to_integer(socket.assigns.lora_ping_count)
+      ping_count = String.to_integer(socket.assigns.lora_ping_count)
+      throughput_count = String.to_integer(socket.assigns.lora_throughput_count)
 
       Task.start(fn ->
-        LoRaTestRunner.run_ping(count, label: label)
+        # Run ping test first
+        LoRaTestRunner.run_ping(ping_count, label: label)
+        # Small delay between tests
+        Process.sleep(500)
+        # Then run throughput test
+        LoRaTestRunner.run_throughput(throughput_count, label: label)
       end)
 
       {:noreply,
        socket
-       |> assign(lora_test_running: true, lora_test_type: :ping)
-       |> add_log("Field Test [#{label}]: Running #{count} pings...")}
+       |> assign(lora_test_running: true, lora_test_type: :field)
+       |> add_log("Field Test [#{label}]: Running #{ping_count} pings + #{throughput_count} packet throughput...")}
     end
   end
 
@@ -1005,7 +1011,7 @@ defmodule D2dDemoWeb.DashboardLive do
             class="btn btn-success btn-lg"
             disabled={!@lora_connected or @lora_test_running or @beacon_running}
           >
-            <%= if @lora_test_running and @lora_test_type == :ping do %>
+            <%= if @lora_test_running and @lora_test_type == :field do %>
               <span class="loading loading-spinner loading-sm"></span>
             <% end %>
             Run Field Test
