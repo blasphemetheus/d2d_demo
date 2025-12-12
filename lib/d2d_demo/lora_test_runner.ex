@@ -272,8 +272,9 @@ defmodule D2dDemo.LoRaTestRunner do
 
   defp finish_ping_test(state) do
     total_time = System.monotonic_time(:millisecond) - state.start_time
-    successful = Enum.filter(state.results, & &1.rtt)
-    rtts = Enum.map(successful, & &1.rtt)
+    # Use Map.get to safely handle results that don't have :rtt key (tx_errors)
+    successful = Enum.filter(state.results, &Map.get(&1, :rtt))
+    rtts = Enum.map(successful, &Map.get(&1, :rtt))
 
     result = %{
       test_type: :ping,
