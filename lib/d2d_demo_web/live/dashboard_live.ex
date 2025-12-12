@@ -605,10 +605,9 @@ defmodule D2dDemoWeb.DashboardLive do
 
   @impl true
   def handle_info({:lora_ping_result, result, current, total}, socket) do
-    log_msg = if result.rtt do
-      "LoRa Ping #{current}/#{total}: #{result.rtt}ms"
-    else
-      "LoRa Ping #{current}/#{total}: #{result.error || "timeout"}"
+    log_msg = case Map.get(result, :rtt) do
+      nil -> "LoRa Ping #{current}/#{total}: #{Map.get(result, :error, "timeout")}"
+      rtt -> "LoRa Ping #{current}/#{total}: #{rtt}ms"
     end
     {:noreply, add_log(socket, log_msg)}
   end
