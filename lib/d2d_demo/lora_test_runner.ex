@@ -10,7 +10,6 @@ defmodule D2dDemo.LoRaTestRunner do
   @ping_prefix "PING:"
   @throughput_prefix "TPT:"
   @default_ping_timeout 15_000
-  @default_throughput_timeout 30_000
   @payload_size 50  # bytes per packet for throughput test
 
   # Client API
