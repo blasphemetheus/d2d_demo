@@ -16,21 +16,39 @@ echo "Cleaning up previous connections..."
 pkill -f "bt-network" 2>/dev/null || true
 sleep 0.5
 
-# Disconnect any existing connection to this device
-bt-device -d "$MAC" 2>/dev/null || true
-sleep 0.5
-
-# Check if bnep0 already exists and remove it
+# Check if bnep0 already exists - might already be connected
 if ip link show bnep0 &>/dev/null; then
-    echo "Removing existing bnep0 interface..."
+    echo "bnep0 already exists, configuring IP..."
+    ip link set bnep0 up
+    ip addr flush dev bnep0 2>/dev/null || true
+    ip addr add "$IP/24" dev bnep0 2>/dev/null || true
+    if ping -c 1 -W 2 192.168.44.1 &>/dev/null; then
+        echo "OK: Already connected to $MAC, bnep0 at $IP"
+        exit 0
+    fi
+    # Connection exists but not working, clean it up
+    echo "Existing connection not working, cleaning up..."
     ip link set bnep0 down 2>/dev/null || true
     ip link delete bnep0 2>/dev/null || true
     sleep 0.5
 fi
 
-# Power on and make sure we can connect
-echo -e "power on\nagent on\ndefault-agent\ntrust $MAC\nquit" | bluetoothctl 2>&1 || true
-sleep 1
+# Disconnect any existing connection to this device
+bt-device -d "$MAC" 2>/dev/null || true
+sleep 0.5
+
+# Power on, pair and trust
+echo "Setting up Bluetooth..."
+bluetoothctl << EOF
+power on
+agent on
+default-agent
+trust $MAC
+pair $MAC
+connect $MAC
+quit
+EOF
+sleep 2
 
 # Check if bt-network is available
 if ! command -v bt-network &> /dev/null; then

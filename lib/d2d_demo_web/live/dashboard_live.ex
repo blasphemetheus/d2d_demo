@@ -475,13 +475,16 @@ defmodule D2dDemoWeb.DashboardLive do
     label = socket.assigns.test_label
 
     Task.start(fn ->
-      # Run 5 pings
-      TestRunner.run_ping(peer_ip, 5, transport: :wifi, label: label)
-      # Small delay between tests
+      # Run 5 individual pings with progress
+      for i <- 1..5 do
+        TestRunner.run_ping(peer_ip, 1, transport: :wifi, label: "#{label}_ping#{i}")
+        Process.sleep(200)
+      end
+      # Small delay between test types
       Process.sleep(500)
       # Run 3 throughput tests (each runs iperf3 for 10 seconds)
       for i <- 1..3 do
-        TestRunner.run_throughput(peer_ip, 10, transport: :wifi, label: "#{label}_run#{i}")
+        TestRunner.run_throughput(peer_ip, 10, transport: :wifi, label: "#{label}_throughput#{i}")
         Process.sleep(500)
       end
     end)
@@ -560,13 +563,16 @@ defmodule D2dDemoWeb.DashboardLive do
     label = socket.assigns.test_label
 
     Task.start(fn ->
-      # Run 5 pings
-      TestRunner.run_ping(peer_ip, 5, transport: :bluetooth, label: label)
-      # Small delay between tests
+      # Run 5 individual pings with progress
+      for i <- 1..5 do
+        TestRunner.run_ping(peer_ip, 1, transport: :bluetooth, label: "#{label}_ping#{i}")
+        Process.sleep(200)
+      end
+      # Small delay between test types
       Process.sleep(500)
       # Run 3 throughput tests (each runs iperf3 for 10 seconds)
       for i <- 1..3 do
-        TestRunner.run_throughput(peer_ip, 10, transport: :bluetooth, label: "#{label}_run#{i}")
+        TestRunner.run_throughput(peer_ip, 10, transport: :bluetooth, label: "#{label}_throughput#{i}")
         Process.sleep(500)
       end
     end)
