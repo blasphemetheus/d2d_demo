@@ -37,6 +37,59 @@ defmodule D2dDemo.LoRaTestRunner do
     GenServer.call(__MODULE__, :running?)
   end
 
+  @doc """
+  Run a complete field test at a given distance/location.
+  Runs ping test and prints summary. All results are logged with the label.
+
+  ## Examples
+
+      iex> D2dDemo.LoRaTestRunner.field_test("100m")
+      iex> D2dDemo.LoRaTestRunner.field_test("500m", ping_count: 10)
+  """
+  def field_test(label, opts \\ []) do
+    ping_count = Keyword.get(opts, :ping_count, 5)
+
+    IO.puts("\n" <> String.duplicate("=", 50))
+    IO.puts("FIELD TEST: #{label}")
+    IO.puts(String.duplicate("=", 50))
+
+    # Run ping test
+    IO.puts("\n📡 Running #{ping_count} pings...")
+    ping_result = run_ping(ping_count, label: label)
+
+    case ping_result do
+      %{packets_sent: sent, packets_received: recv, rtt_avg_ms: avg, rtt_min_ms: min, rtt_max_ms: max} ->
+        loss = Float.round((sent - recv) / sent * 100, 1)
+        IO.puts("✓ Ping: #{recv}/#{sent} received (#{loss}% loss)")
+        if avg, do: IO.puts("  RTT: avg=#{avg}ms, min=#{min}ms, max=#{max}ms")
+
+      _ ->
+        IO.puts("✗ Ping test failed")
+    end
+
+    IO.puts("\n" <> String.duplicate("=", 50))
+    IO.puts("Results logged with label: #{label}")
+    IO.puts(String.duplicate("=", 50) <> "\n")
+
+    ping_result
+  end
+
+  @doc """
+  Quick connectivity check - sends one ping to verify the remote is responding.
+  """
+  def check_connection do
+    IO.puts("Checking connection...")
+    case run_ping(1, timeout: 5_000) do
+      %{packets_received: 1, rtt_avg_ms: rtt} ->
+        IO.puts("✓ Connected! RTT: #{rtt}ms")
+        :ok
+
+      _ ->
+        IO.puts("✗ No response from remote")
+        :error
+    end
+  end
+
   # Server callbacks
 
   @impl true
