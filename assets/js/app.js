@@ -25,11 +25,31 @@ import {LiveSocket} from "phoenix_live_view"
 import {hooks as colocatedHooks} from "phoenix-colocated/d2d_demo"
 import topbar from "../vendor/topbar"
 
+// Custom hooks
+const Hooks = {
+  PersistLabel: {
+    mounted() {
+      // Restore label from localStorage on mount
+      const savedLabel = localStorage.getItem("d2d_test_label")
+      if (savedLabel && savedLabel !== this.el.value) {
+        this.el.value = savedLabel
+        // Push to server
+        this.pushEvent("update_test_label", {label: savedLabel})
+      }
+
+      // Save to localStorage on input
+      this.el.addEventListener("input", (e) => {
+        localStorage.setItem("d2d_test_label", e.target.value)
+      })
+    }
+  }
+}
+
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: {_csrf_token: csrfToken},
-  hooks: {...colocatedHooks},
+  hooks: {...colocatedHooks, ...Hooks},
 })
 
 // Show progress bar on live navigation and form submits

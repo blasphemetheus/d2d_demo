@@ -469,6 +469,27 @@ defmodule D2dDemoWeb.DashboardLive do
   end
 
   @impl true
+  def handle_event("wifi_field_test", _params, socket) do
+    socket = socket |> assign(wifi_test_running: true) |> add_log("WiFi: Running field test (5 pings + 3 throughput)...")
+    peer_ip = WiFi.get_peer_ip()
+    label = socket.assigns.test_label
+
+    Task.start(fn ->
+      # Run 5 pings
+      TestRunner.run_ping(peer_ip, 5, transport: :wifi, label: label)
+      # Small delay between tests
+      Process.sleep(500)
+      # Run 3 throughput tests (each runs iperf3 for 10 seconds)
+      for i <- 1..3 do
+        TestRunner.run_throughput(peer_ip, 10, transport: :wifi, label: "#{label}_run#{i}")
+        Process.sleep(500)
+      end
+    end)
+
+    {:noreply, socket}
+  end
+
+  @impl true
   def handle_event("update_test_label", %{"label" => label}, socket) do
     {:noreply, assign(socket, test_label: label)}
   end
@@ -527,6 +548,27 @@ defmodule D2dDemoWeb.DashboardLive do
 
     Task.start(fn ->
       TestRunner.run_throughput(peer_ip, 10, transport: :bluetooth, label: label)
+    end)
+
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_event("bt_field_test", _params, socket) do
+    socket = socket |> assign(bt_test_running: true) |> add_log("Bluetooth: Running field test (5 pings + 3 throughput)...")
+    peer_ip = Bluetooth.get_peer_ip()
+    label = socket.assigns.test_label
+
+    Task.start(fn ->
+      # Run 5 pings
+      TestRunner.run_ping(peer_ip, 5, transport: :bluetooth, label: label)
+      # Small delay between tests
+      Process.sleep(500)
+      # Run 3 throughput tests (each runs iperf3 for 10 seconds)
+      for i <- 1..3 do
+        TestRunner.run_throughput(peer_ip, 10, transport: :bluetooth, label: "#{label}_run#{i}")
+        Process.sleep(500)
+      end
     end)
 
     {:noreply, socket}
@@ -744,8 +786,10 @@ defmodule D2dDemoWeb.DashboardLive do
             <input
               type="text"
               name="label"
+              id="test-label-input"
               value={@test_label}
               phx-debounce="200"
+              phx-hook="PersistLabel"
               class="input input-bordered input-sm w-full"
               placeholder="e.g. 20ft_test1, indoor_close, outdoor_50m"
             />
@@ -1155,10 +1199,40 @@ defmodule D2dDemoWeb.DashboardLive do
       </div>
     </div>
 
-    <!-- Tests -->
+    <!-- Field Testing -->
     <div class="card bg-base-100 shadow-xl">
       <div class="card-body">
-        <h2 class="card-title">Network Tests</h2>
+        <h2 class="card-title">Field Testing</h2>
+        <p class="text-sm text-base-content/70">
+          Runs 5 pings + 3 throughput tests. Set test label above for your distance/location.
+        </p>
+        <div class="flex items-center gap-4 mt-2">
+          <button
+            phx-click="wifi_field_test"
+            class="btn btn-success btn-lg"
+            disabled={!@wifi_connected or @wifi_test_running}
+          >
+            <%= if @wifi_test_running do %>
+              <span class="loading loading-spinner loading-sm"></span>
+            <% end %>
+            Run Field Test
+            <%= if @test_label != "" do %>
+              <span class="badge badge-neutral ml-2"><%= @test_label %></span>
+            <% end %>
+          </button>
+        </div>
+        <%= if @test_label == "" do %>
+          <div class="text-warning text-sm mt-2">
+            ⚠️ Enter a label above before running field test
+          </div>
+        <% end %>
+      </div>
+    </div>
+
+    <!-- Individual Tests -->
+    <div class="card bg-base-100 shadow-xl">
+      <div class="card-body">
+        <h2 class="card-title">Individual Tests</h2>
         <div class="flex gap-4">
           <button phx-click="wifi_ping" class="btn btn-primary" disabled={!@wifi_connected or @wifi_test_running}>
             <%= if @wifi_test_running, do: "Running...", else: "Run Ping Test" %>
@@ -1212,10 +1286,40 @@ defmodule D2dDemoWeb.DashboardLive do
       </div>
     </div>
 
-    <!-- Tests -->
+    <!-- Field Testing -->
     <div class="card bg-base-100 shadow-xl">
       <div class="card-body">
-        <h2 class="card-title">Network Tests</h2>
+        <h2 class="card-title">Field Testing</h2>
+        <p class="text-sm text-base-content/70">
+          Runs 5 pings + 3 throughput tests. Set test label above for your distance/location.
+        </p>
+        <div class="flex items-center gap-4 mt-2">
+          <button
+            phx-click="bt_field_test"
+            class="btn btn-success btn-lg"
+            disabled={!@bt_connected or @bt_test_running}
+          >
+            <%= if @bt_test_running do %>
+              <span class="loading loading-spinner loading-sm"></span>
+            <% end %>
+            Run Field Test
+            <%= if @test_label != "" do %>
+              <span class="badge badge-neutral ml-2"><%= @test_label %></span>
+            <% end %>
+          </button>
+        </div>
+        <%= if @test_label == "" do %>
+          <div class="text-warning text-sm mt-2">
+            ⚠️ Enter a label above before running field test
+          </div>
+        <% end %>
+      </div>
+    </div>
+
+    <!-- Individual Tests -->
+    <div class="card bg-base-100 shadow-xl">
+      <div class="card-body">
+        <h2 class="card-title">Individual Tests</h2>
         <div class="flex gap-4">
           <button phx-click="bt_ping" class="btn btn-primary" disabled={!@bt_connected or @bt_test_running}>
             <%= if @bt_test_running, do: "Running...", else: "Run Ping Test" %>

@@ -11,6 +11,23 @@ echo "Connecting to Bluetooth PAN at $MAC..."
 systemctl start bluetooth 2>/dev/null || true
 sleep 1
 
+# Clean up any existing bt-network processes and connections
+echo "Cleaning up previous connections..."
+pkill -f "bt-network" 2>/dev/null || true
+sleep 0.5
+
+# Disconnect any existing connection to this device
+bt-device -d "$MAC" 2>/dev/null || true
+sleep 0.5
+
+# Check if bnep0 already exists and remove it
+if ip link show bnep0 &>/dev/null; then
+    echo "Removing existing bnep0 interface..."
+    ip link set bnep0 down 2>/dev/null || true
+    ip link delete bnep0 2>/dev/null || true
+    sleep 0.5
+fi
+
 # Power on and make sure we can connect
 echo -e "power on\nagent on\ndefault-agent\ntrust $MAC\nquit" | bluetoothctl 2>&1 || true
 sleep 1
@@ -43,5 +60,6 @@ done
 
 # Cleanup if failed
 kill $BT_PID 2>/dev/null || true
+pkill -f "bt-network" 2>/dev/null || true
 echo "ERROR: bnep0 interface not found after 20 seconds"
 exit 1

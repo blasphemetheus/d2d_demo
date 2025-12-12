@@ -11,6 +11,8 @@ defmodule D2dDemo.LoRaTestRunner do
   @throughput_prefix "TPT:"
   @default_ping_timeout 15_000
   @payload_size 50  # bytes per packet for throughput test
+  # Delay between packets - must account for half-duplex echo turnaround (~300-400ms)
+  @throughput_packet_delay 500
 
   # Client API
 
@@ -38,15 +40,16 @@ defmodule D2dDemo.LoRaTestRunner do
 
   @doc """
   Run a complete field test at a given distance/location.
-  Runs ping test and prints summary. All results are logged with the label.
+  Runs ping and throughput tests. All results are logged with the label.
 
   ## Examples
 
       iex> D2dDemo.LoRaTestRunner.field_test("100m")
-      iex> D2dDemo.LoRaTestRunner.field_test("500m", ping_count: 10)
+      iex> D2dDemo.LoRaTestRunner.field_test("500m", ping_count: 10, throughput_count: 5)
   """
   def field_test(label, opts \\ []) do
     ping_count = Keyword.get(opts, :ping_count, 5)
+    throughput_count = Keyword.get(opts, :throughput_count, 3)
 
     IO.puts("\n" <> String.duplicate("=", 50))
     IO.puts("FIELD TEST: #{label}")
@@ -66,11 +69,25 @@ defmodule D2dDemo.LoRaTestRunner do
         IO.puts("✗ Ping test failed")
     end
 
+    # Run throughput test
+    IO.puts("\n📊 Running #{throughput_count} throughput packets...")
+    throughput_result = run_throughput(throughput_count, label: label)
+
+    case throughput_result do
+      %{packets_sent: sent, packets_success: success, duration_ms: duration} ->
+        loss = Float.round((sent - success) / max(sent, 1) * 100, 1)
+        IO.puts("✓ Throughput: #{success}/#{sent} successful (#{loss}% loss)")
+        IO.puts("  Duration: #{duration}ms")
+
+      _ ->
+        IO.puts("✗ Throughput test failed")
+    end
+
     IO.puts("\n" <> String.duplicate("=", 50))
     IO.puts("Results logged with label: #{label}")
     IO.puts(String.duplicate("=", 50) <> "\n")
 
-    ping_result
+    %{ping: ping_result, throughput: throughput_result}
   end
 
   @doc """
@@ -238,7 +255,7 @@ defmodule D2dDemo.LoRaTestRunner do
 
         {:error, reason} ->
           result = %{seq: seq, success: false, error: reason}
-          Process.send_after(self(), :run_next_throughput, 100)
+          Process.send_after(self(), :run_next_throughput, @throughput_packet_delay)
           {:noreply, %{state | results: [result | state.results], test_count: state.test_count + 1}}
       end
     end
@@ -261,8 +278,8 @@ defmodule D2dDemo.LoRaTestRunner do
     result = %{seq: state.pending.seq, success: true, tx_time: System.monotonic_time(:millisecond) - state.pending.sent_at}
     broadcast(:lora_throughput, {:throughput_progress, state.test_count, state.test_total})
 
-    # Small delay between packets
-    Process.send_after(self(), :run_next_throughput, 100)
+    # Delay between packets to allow half-duplex echo turnaround
+    Process.send_after(self(), :run_next_throughput, @throughput_packet_delay)
     {:noreply, %{state | waiting_for_tx_ok: false, results: [result | state.results]}}
   end
 
@@ -279,7 +296,7 @@ defmodule D2dDemo.LoRaTestRunner do
 
       :throughput ->
         broadcast(:lora_throughput, {:throughput_progress, state.test_count, state.test_total})
-        Process.send_after(self(), :run_next_throughput, 100)
+        Process.send_after(self(), :run_next_throughput, @throughput_packet_delay)
     end
 
     {:noreply, %{state | waiting_for_tx_ok: false, results: [result | state.results]}}
