@@ -9,56 +9,17 @@ echo "Connecting to Bluetooth PAN at $MAC..."
 
 # Ensure bluetooth is running
 systemctl start bluetooth 2>/dev/null || true
-sleep 1
 
-# Clean up any existing bt-network processes and connections
-echo "Cleaning up previous connections..."
-pkill -f "bt-network" 2>/dev/null || true
-sleep 0.5
-
-# Check if bnep0 already exists - might already be connected
+# Check if bnep0 already exists and working
 if ip link show bnep0 &>/dev/null; then
-    echo "bnep0 already exists, configuring IP..."
-    ip link set bnep0 up
+    ip link set bnep0 up 2>/dev/null || true
     ip addr flush dev bnep0 2>/dev/null || true
     ip addr add "$IP/24" dev bnep0 2>/dev/null || true
     if ping -c 1 -W 2 192.168.44.1 &>/dev/null; then
         echo "OK: Already connected to $MAC, bnep0 at $IP"
         exit 0
     fi
-    # Connection exists but not working, clean it up
-    echo "Existing connection not working, cleaning up..."
-    ip link set bnep0 down 2>/dev/null || true
-    ip link delete bnep0 2>/dev/null || true
-    sleep 0.5
 fi
-
-# Disconnect any existing connection to this device
-bt-device -d "$MAC" 2>/dev/null || true
-sleep 0.5
-
-# Power on and connect (skip pairing if already paired)
-echo "Setting up Bluetooth..."
-# Quick check if already paired
-PAIRED=$(bluetoothctl info "$MAC" 2>/dev/null | grep -c "Paired: yes" || echo "0")
-
-if [ "$PAIRED" = "0" ]; then
-    echo "Device not paired, pairing first..."
-    bluetoothctl << EOF
-power on
-agent on
-default-agent
-trust $MAC
-pair $MAC
-quit
-EOF
-    sleep 3
-fi
-
-# Just connect (faster if already paired)
-echo "Connecting to $MAC..."
-bluetoothctl connect "$MAC" &
-sleep 2
 
 # Check if bt-network is available
 if ! command -v bt-network &> /dev/null; then
@@ -66,15 +27,18 @@ if ! command -v bt-network &> /dev/null; then
     exit 1
 fi
 
-# Connect using bt-network as PANU client
-echo "Connecting to NAP server via bt-network..."
+# Power on bluetooth
+bluetoothctl power on 2>/dev/null || true
+
+# Try bt-network first (works if already paired and Pi NAP is running)
+echo "Attempting bt-network connection..."
+pkill -f "bt-network" 2>/dev/null || true
+sleep 0.5
 bt-network -c "$MAC" nap &
 BT_PID=$!
-sleep 3
 
-# Wait for bnep0 interface (up to 20 seconds)
-echo "Waiting for bnep0 interface..."
-for i in {1..20}; do
+# Wait for bnep0 (first attempt - 15 seconds)
+for i in {1..15}; do
   if ip link show bnep0 &>/dev/null; then
     ip link set bnep0 up
     ip addr flush dev bnep0 2>/dev/null || true
@@ -83,11 +47,43 @@ for i in {1..20}; do
     exit 0
   fi
   sleep 1
-  echo "  Waiting... ($i/20)"
+  echo "  Waiting... ($i/15)"
+done
+
+# First attempt failed - try with bluetoothctl connect
+echo "First attempt failed, trying bluetoothctl connect..."
+kill $BT_PID 2>/dev/null || true
+pkill -f "bt-network" 2>/dev/null || true
+
+# Connect via bluetoothctl then bt-network
+bluetoothctl << EOF
+power on
+agent on
+default-agent
+trust $MAC
+connect $MAC
+EOF
+sleep 3
+
+bt-network -c "$MAC" nap &
+BT_PID=$!
+
+# Wait for bnep0 (second attempt - 30 seconds)
+echo "Waiting for bnep0 interface..."
+for i in {1..30}; do
+  if ip link show bnep0 &>/dev/null; then
+    ip link set bnep0 up
+    ip addr flush dev bnep0 2>/dev/null || true
+    ip addr add "$IP/24" dev bnep0
+    echo "OK: Connected to $MAC, bnep0 at $IP"
+    exit 0
+  fi
+  sleep 1
+  echo "  Waiting... ($i/30)"
 done
 
 # Cleanup if failed
 kill $BT_PID 2>/dev/null || true
 pkill -f "bt-network" 2>/dev/null || true
-echo "ERROR: bnep0 interface not found after 20 seconds"
+echo "ERROR: bnep0 interface not found after multiple attempts"
 exit 1

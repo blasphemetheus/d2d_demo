@@ -17,7 +17,7 @@ defmodule D2dDemo.Network.Bluetooth do
   end
 
   def connect(peer_mac \\ @default_peer_mac, ip \\ @default_ip) do
-    GenServer.call(__MODULE__, {:connect, peer_mac, ip}, 60_000)
+    GenServer.call(__MODULE__, {:connect, peer_mac, ip}, 75_000)
   end
 
   def disconnect do
