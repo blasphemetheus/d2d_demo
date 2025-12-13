@@ -503,16 +503,21 @@ defmodule D2dDemoWeb.DashboardLive do
 
   @impl true
   def handle_event("bt_connect", _params, socket) do
-    socket = add_log(socket, "Bluetooth: Connecting to #{socket.assigns.bt_peer_mac}...")
-    case Bluetooth.connect(socket.assigns.bt_peer_mac) do
-      :ok ->
-        {:noreply,
-         socket
-         |> assign(bt_connected: true)
-         |> add_log("Bluetooth: Connected")}
-      {:error, reason} ->
-        {:noreply, add_log(socket, "Bluetooth: Connection failed: #{String.slice(to_string(reason), 0, 100)}")}
-    end
+    peer_mac = socket.assigns.bt_peer_mac
+    socket = add_log(socket, "Bluetooth: Connecting to #{peer_mac}...")
+
+    # Run async so UI doesn't block
+    Task.start(fn ->
+      case Bluetooth.connect(peer_mac) do
+        :ok ->
+          # PubSub broadcast already happens in Bluetooth GenServer
+          :ok
+        {:error, reason} ->
+          Phoenix.PubSub.broadcast(D2dDemo.PubSub, "network:bluetooth:status", {:bt_error, reason})
+      end
+    end)
+
+    {:noreply, socket}
   end
 
   @impl true
@@ -610,7 +615,13 @@ defmodule D2dDemoWeb.DashboardLive do
 
   @impl true
   def handle_info({:bt_connected, status}, socket) do
-    {:noreply, assign(socket, bt_connected: status)}
+    msg = if status, do: "Bluetooth: Connected", else: "Bluetooth: Disconnected"
+    {:noreply, socket |> assign(bt_connected: status) |> add_log(msg)}
+  end
+
+  @impl true
+  def handle_info({:bt_error, reason}, socket) do
+    {:noreply, add_log(socket, "Bluetooth: Connection failed: #{String.slice(to_string(reason), 0, 100)}")}
   end
 
   @impl true
