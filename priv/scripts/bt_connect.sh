@@ -59,12 +59,19 @@ echo "Starting bt-network..."
 nohup bt-network -c "$MAC" nap </dev/null &>/dev/null 2>&1 &
 BT_PID=$!
 
-# Wait for bnep0 (up to 40 seconds total)
+# Wait for bnep0 and verify Pi is reachable (up to 40 seconds total)
 echo "Waiting for bnep0 interface..."
 for i in {1..40}; do
   if ip link show bnep0 &>/dev/null; then
     configure_bnep0
-    exit 0
+    # Verify Pi is actually reachable
+    echo "Verifying connection to peer..."
+    if ping -c 1 -W 3 192.168.44.1 &>/dev/null; then
+      echo "OK: Peer 192.168.44.1 is reachable"
+      exit 0
+    else
+      echo "WARNING: bnep0 up but peer not responding, waiting..."
+    fi
   fi
   sleep 1
   if (( i % 5 == 0 )); then
@@ -75,5 +82,9 @@ done
 # Cleanup if failed
 kill $BT_PID 2>/dev/null || true
 pkill -f "bt-network" 2>/dev/null || true
-echo "ERROR: bnep0 interface not found after 40 seconds"
+if ip link show bnep0 &>/dev/null; then
+    echo "ERROR: bnep0 interface exists but peer 192.168.44.1 not reachable (Pi NAP not running?)"
+else
+    echo "ERROR: bnep0 interface not created after 40 seconds"
+fi
 exit 1
