@@ -571,14 +571,14 @@ defmodule D2dDemoWeb.DashboardLive do
       # Run 5 individual pings with progress
       for i <- 1..5 do
         TestRunner.run_ping(peer_ip, 1, transport: :bluetooth, label: "#{label}_ping#{i}")
-        Process.sleep(200)
+        Process.sleep(500)  # Bluetooth needs more time between tests
       end
       # Small delay between test types
-      Process.sleep(500)
-      # Run 3 throughput tests (each runs iperf3 for 10 seconds)
+      Process.sleep(1000)
+      # Run 3 throughput tests (shorter duration for slow BT connection)
       for i <- 1..3 do
-        TestRunner.run_throughput(peer_ip, 10, transport: :bluetooth, label: "#{label}_throughput#{i}")
-        Process.sleep(500)
+        TestRunner.run_throughput(peer_ip, 3, transport: :bluetooth, label: "#{label}_throughput#{i}")
+        Process.sleep(1000)  # More time between BT throughput tests
       end
     end)
 
