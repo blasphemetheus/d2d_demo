@@ -52,12 +52,14 @@ timeout 3 bluetoothctl trust "$MAC" &>/dev/null || true
 # Start connect in background (often fails with "br-connection-not-supported" but that's OK)
 echo "Connecting to $MAC..."
 timeout 10 bluetoothctl connect "$MAC" &>/dev/null &
+disown
 sleep 1
 
-# Start bt-network
+# Start bt-network (disown so script can exit while it runs)
 echo "Starting bt-network..."
 bt-network -c "$MAC" nap &
 BT_PID=$!
+disown $BT_PID
 
 # Wait for bnep0 (up to 40 seconds total)
 echo "Waiting for bnep0 interface..."
