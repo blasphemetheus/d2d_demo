@@ -1,0 +1,16 @@
+{"message":"PING:4","timestamp":"2025-12-12T22:11:34.010148Z","type":"lora","hex":"50494E473A34","direction":"tx"}
+{"timestamp":"2025-12-12T22:11:34.060962Z","type":"event","event":"tx_ok"}
+{"message":"ECHO:PING:4","timestamp":"2025-12-12T22:11:34.268422Z","type":"lora","hex":"4543484F3A50494E473A34","direction":"rx"}
+{"message":"PING:71","timestamp":"2025-12-12T22:11:34.771057Z","type":"lora","hex":"50494E473A3731","direction":"tx"}
+{"timestamp":"2025-12-12T22:11:34.822628Z","type":"event","event":"tx_ok"}
+{"message":"ECHO:PING:71","timestamp":"2025-12-12T22:11:35.031941Z","type":"lora","hex":"4543484F3A50494E473A3731","direction":"rx"}
+{"message":"PING:103","timestamp":"2025-12-12T22:11:35.535186Z","type":"lora","hex":"50494E473A313033","direction":"tx"}
+{"timestamp":"2025-12-12T22:11:35.587396Z","type":"event","event":"tx_ok"}
+{"message":"ECHO:PING:103","timestamp":"2025-12-12T22:11:35.801969Z","type":"lora","hex":"4543484F3A50494E473A313033","direction":"rx"}
+{"message":"PING:5058","timestamp":"2025-12-12T22:11:36.305201Z","type":"lora","hex":"50494E473A35303538","direction":"tx"}
+{"timestamp":"2025-12-12T22:11:36.363007Z","type":"event","event":"tx_ok"}
+{"message":"ECHO:PING:5058","timestamp":"2025-12-12T22:11:36.578326Z","type":"lora","hex":"4543484F3A50494E473A35303538","direction":"rx"}
+{"message":"PING:803","timestamp":"2025-12-12T22:11:37.081306Z","type":"lora","hex":"50494E473A383033","direction":"tx"}
+{"timestamp":"2025-12-12T22:11:37.133873Z","type":"event","event":"tx_ok"}
+{"message":"ECHO:PING:803","timestamp":"2025-12-12T22:11:37.348811Z","type":"lora","hex":"4543484F3A50494E473A383033","direction":"rx"}
+{"timestamp":"2025-12-12T22:11:37.852247Z","type":"network_test","result":{"label":"","timestamp":"2025-12-12T22:11:37.849835Z","test_type":"ping","transport":"lora","packets_sent":5,"packet_loss_percent":0.0,"packets_received":5,"rtt_min_ms":258,"rtt_avg_ms":265.4,"rtt_max_ms":273,"rtt_stddev_ms":5.3,"total_time_ms":3840,"individual_results":[{"error":null,"timestamp":"2025-12-12T22:11:34.268442Z","rtt":258,"seq":4},{"error":null,"timestamp":"2025-12-12T22:11:35.031964Z","rtt":261,"seq":71},{"error":null,"timestamp":"2025-12-12T22:11:35.801975Z","rtt":267,"seq":103},{"error":null,"timestamp":"2025-12-12T22:11:36.578351Z","rtt":273,"seq":5058},{"error":null,"timestamp":"2025-12-12T22:11:37.348822Z","rtt":268,"seq":803}]},"test_type":"ping","transport":"lora"}

@@ -1,0 +1,44 @@
+{"message":"PING:740","timestamp":"2025-12-13T00:41:09.816745Z","type":"lora","hex":"50494E473A373430","direction":"tx"}
+{"timestamp":"2025-12-13T00:41:09.868180Z","type":"event","event":"tx_ok"}
+{"message":"ECHO:PING:740","timestamp":"2025-12-13T00:41:10.084109Z","type":"lora","hex":"4543484F3A50494E473A373430","direction":"rx"}
+{"timestamp":"2025-12-13T00:41:10.587589Z","type":"network_test","result":{"label":"","timestamp":"2025-12-13T00:41:10.584987Z","transport":"lora","test_type":"ping","rtt_avg_ms":268.0,"packets_received":1,"rtt_min_ms":268,"rtt_max_ms":268,"packets_sent":1,"individual_results":[{"error":null,"timestamp":"2025-12-13T00:41:10.084159Z","rtt":268,"seq":740}],"packet_loss_percent":0.0,"rtt_stddev_ms":0.0,"total_time_ms":769},"transport":"lora","test_type":"ping"}
+{"message":"PING:4578","timestamp":"2025-12-13T00:41:36.026310Z","type":"lora","hex":"50494E473A34353738","direction":"tx"}
+{"timestamp":"2025-12-13T00:41:36.083867Z","type":"event","event":"tx_ok"}
+{"message":"ECHO:PING:4578","timestamp":"2025-12-13T00:41:36.301554Z","type":"lora","hex":"4543484F3A50494E473A34353738","direction":"rx"}
+{"message":"PING:4642","timestamp":"2025-12-13T00:41:36.804344Z","type":"lora","hex":"50494E473A34363432","direction":"tx"}
+{"timestamp":"2025-12-13T00:41:36.862469Z","type":"event","event":"tx_ok"}
+{"message":"ECHO:PING:4642","timestamp":"2025-12-13T00:41:37.078412Z","type":"lora","hex":"4543484F3A50494E473A34363432","direction":"rx"}
+{"message":"PING:295","timestamp":"2025-12-13T00:41:37.581758Z","type":"lora","hex":"50494E473A323935","direction":"tx"}
+{"timestamp":"2025-12-13T00:41:37.633956Z","type":"event","event":"tx_ok"}
+{"message":"ECHO:PING:295","timestamp":"2025-12-13T00:41:37.848956Z","type":"lora","hex":"4543484F3A50494E473A323935","direction":"rx"}
+{"message":"PING:1540","timestamp":"2025-12-13T00:41:38.352041Z","type":"lora","hex":"50494E473A31353430","direction":"tx"}
+{"timestamp":"2025-12-13T00:41:38.409716Z","type":"event","event":"tx_ok"}
+{"message":"ECHO:PING:1540","timestamp":"2025-12-13T00:41:38.625539Z","type":"lora","hex":"4543484F3A50494E473A31353430","direction":"rx"}
+{"message":"PING:387","timestamp":"2025-12-13T00:41:39.128418Z","type":"lora","hex":"50494E473A333837","direction":"tx"}
+{"timestamp":"2025-12-13T00:41:39.180539Z","type":"event","event":"tx_ok"}
+{"message":"ECHO:PING:387","timestamp":"2025-12-13T00:41:39.395855Z","type":"lora","hex":"4543484F3A50494E473A333837","direction":"rx"}
+{"timestamp":"2025-12-13T00:41:39.899482Z","type":"network_test","result":{"label":"demonstration_warm_up","timestamp":"2025-12-13T00:41:39.896972Z","transport":"lora","test_type":"ping","rtt_avg_ms":271.6,"packets_received":5,"rtt_min_ms":268,"rtt_max_ms":275,"packets_sent":5,"individual_results":[{"error":null,"timestamp":"2025-12-13T00:41:36.301576Z","rtt":275,"seq":4578},{"error":null,"timestamp":"2025-12-13T00:41:37.078427Z","rtt":274,"seq":4642},{"error":null,"timestamp":"2025-12-13T00:41:37.848979Z","rtt":268,"seq":295},{"error":null,"timestamp":"2025-12-13T00:41:38.625562Z","rtt":273,"seq":1540},{"error":null,"timestamp":"2025-12-13T00:41:39.395873Z","rtt":268,"seq":387}],"packet_loss_percent":0.0,"rtt_stddev_ms":3.0,"total_time_ms":3871},"transport":"lora","test_type":"ping"}
+{"message":"TPT:1:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX","timestamp":"2025-12-13T00:41:40.402232Z","type":"lora","hex":"5450543A313A58585858585858585858585858585858585858585858585858585858585858585858585858585858","direction":"tx"}
+{"timestamp":"2025-12-13T00:41:40.532652Z","type":"event","event":"tx_ok"}
+{"message":"TPT:2:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX","timestamp":"2025-12-13T00:41:41.035118Z","type":"lora","hex":"5450543A323A58585858585858585858585858585858585858585858585858585858585858585858585858585858","direction":"tx"}
+{"timestamp":"2025-12-13T00:41:41.163899Z","type":"event","event":"tx_ok"}
+{"message":"TPT:3:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX","timestamp":"2025-12-13T00:41:41.667428Z","type":"lora","hex":"5450543A333A58585858585858585858585858585858585858585858585858585858585858585858585858585858","direction":"tx"}
+{"timestamp":"2025-12-13T00:41:41.796030Z","type":"event","event":"tx_ok"}
+{"message":"TPT:4:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX","timestamp":"2025-12-13T00:41:42.299313Z","type":"lora","hex":"5450543A343A58585858585858585858585858585858585858585858585858585858585858585858585858585858","direction":"tx"}
+{"timestamp":"2025-12-13T00:41:42.428202Z","type":"event","event":"tx_ok"}
+{"message":"TPT:5:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX","timestamp":"2025-12-13T00:41:42.931360Z","type":"lora","hex":"5450543A353A58585858585858585858585858585858585858585858585858585858585858585858585858585858","direction":"tx"}
+{"timestamp":"2025-12-13T00:41:43.060074Z","type":"event","event":"tx_ok"}
+{"message":"TPT:6:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX","timestamp":"2025-12-13T00:41:43.563429Z","type":"lora","hex":"5450543A363A58585858585858585858585858585858585858585858585858585858585858585858585858585858","direction":"tx"}
+{"timestamp":"2025-12-13T00:41:43.692027Z","type":"event","event":"tx_ok"}
+{"message":"TPT:7:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX","timestamp":"2025-12-13T00:41:44.193913Z","type":"lora","hex":"5450543A373A58585858585858585858585858585858585858585858585858585858585858585858585858585858","direction":"tx"}
+{"timestamp":"2025-12-13T00:41:44.320821Z","type":"event","event":"tx_ok"}
+{"message":"TPT:8:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX","timestamp":"2025-12-13T00:41:44.823301Z","type":"lora","hex":"5450543A383A58585858585858585858585858585858585858585858585858585858585858585858585858585858","direction":"tx"}
+{"timestamp":"2025-12-13T00:41:44.950826Z","type":"event","event":"tx_ok"}
+{"message":"TPT:9:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX","timestamp":"2025-12-13T00:41:45.454335Z","type":"lora","hex":"5450543A393A58585858585858585858585858585858585858585858585858585858585858585858585858585858","direction":"tx"}
+{"timestamp":"2025-12-13T00:41:45.583669Z","type":"event","event":"tx_ok"}
+{"message":"TPT:10:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX","timestamp":"2025-12-13T00:41:46.086278Z","type":"lora","hex":"5450543A31303A58585858585858585858585858585858585858585858585858585858585858585858585858585858","direction":"tx"}
+{"timestamp":"2025-12-13T00:41:46.216000Z","type":"event","event":"tx_ok"}
+{"timestamp":"2025-12-13T00:41:46.719988Z","type":"network_test","result":{"label":"demonstration_warm_up","timestamp":"2025-12-13T00:41:46.716963Z","transport":"lora","test_type":"throughput","packets_sent":10,"duration_ms":6315,"packet_loss_percent":0.0,"bandwidth_bps":633,"bandwidth_kbps":0.63,"bytes_transferred":500,"packets_successful":10,"payload_size":50},"transport":"lora","test_type":"throughput"}
+{"timestamp":"2025-12-13T00:42:43.601258Z","type":"event","event":"WIFI_CONNECTED: wlp0s20f3 at 192.168.12.2"}
+{"timestamp":"2025-12-13T00:45:05.383743Z","type":"event","event":"WIFI_DISCONNECTED: wlp0s20f3"}
+{"timestamp":"2025-12-13T00:45:06.617746Z","type":"event","event":"WIFI_RESET: NetworkManager restored"}

@@ -1,0 +1,40 @@
+{"message":"PING:164","timestamp":"2025-12-12T23:42:15.678755Z","type":"lora","hex":"50494E473A313634","direction":"tx"}
+{"timestamp":"2025-12-12T23:42:15.730177Z","type":"event","event":"tx_ok"}
+{"message":"ECHO:PING:164","timestamp":"2025-12-12T23:42:15.945148Z","type":"lora","hex":"4543484F3A50494E473A313634","direction":"rx"}
+{"message":"PING:1093","timestamp":"2025-12-12T23:42:16.447767Z","type":"lora","hex":"50494E473A31303933","direction":"tx"}
+{"timestamp":"2025-12-12T23:42:16.505122Z","type":"event","event":"tx_ok"}
+{"message":"ECHO:PING:1093","timestamp":"2025-12-12T23:42:16.722349Z","type":"lora","hex":"4543484F3A50494E473A31303933","direction":"rx"}
+{"message":"PING:196","timestamp":"2025-12-12T23:42:17.225693Z","type":"lora","hex":"50494E473A313936","direction":"tx"}
+{"timestamp":"2025-12-12T23:42:17.278008Z","type":"event","event":"tx_ok"}
+{"message":"ECHO:PING:196","timestamp":"2025-12-12T23:42:17.493356Z","type":"lora","hex":"4543484F3A50494E473A313936","direction":"rx"}
+{"message":"PING:1221","timestamp":"2025-12-12T23:42:17.996844Z","type":"lora","hex":"50494E473A31323231","direction":"tx"}
+{"timestamp":"2025-12-12T23:42:18.054208Z","type":"event","event":"tx_ok"}
+{"message":"ECHO:PING:1221","timestamp":"2025-12-12T23:42:18.271333Z","type":"lora","hex":"4543484F3A50494E473A31323231","direction":"rx"}
+{"message":"PING:547","timestamp":"2025-12-12T23:42:18.774918Z","type":"lora","hex":"50494E473A353437","direction":"tx"}
+{"timestamp":"2025-12-12T23:42:18.826852Z","type":"event","event":"tx_ok"}
+{"message":"ECHO:PING:547","timestamp":"2025-12-12T23:42:19.042014Z","type":"lora","hex":"4543484F3A50494E473A353437","direction":"rx"}
+{"timestamp":"2025-12-12T23:42:19.544724Z","type":"network_test","result":{"label":"demonstration","timestamp":"2025-12-12T23:42:19.542344Z","transport":"lora","test_type":"ping","rtt_avg_ms":270.2,"packets_received":5,"rtt_min_ms":266,"rtt_max_ms":275,"packets_sent":5,"individual_results":[{"error":null,"timestamp":"2025-12-12T23:42:15.945159Z","rtt":266,"seq":164},{"error":null,"timestamp":"2025-12-12T23:42:16.722370Z","rtt":275,"seq":1093},{"error":null,"timestamp":"2025-12-12T23:42:17.493362Z","rtt":268,"seq":196},{"error":null,"timestamp":"2025-12-12T23:42:18.271371Z","rtt":275,"seq":1221},{"error":null,"timestamp":"2025-12-12T23:42:19.042051Z","rtt":267,"seq":547}],"packet_loss_percent":0.0,"rtt_stddev_ms":4.0,"total_time_ms":3864},"transport":"lora","test_type":"ping"}
+{"message":"TPT:1:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX","timestamp":"2025-12-12T23:42:20.047852Z","type":"lora","hex":"5450543A313A58585858585858585858585858585858585858585858585858585858585858585858585858585858","direction":"tx"}
+{"timestamp":"2025-12-12T23:42:20.177251Z","type":"event","event":"tx_ok"}
+{"message":"TPT:2:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX","timestamp":"2025-12-12T23:42:20.680591Z","type":"lora","hex":"5450543A323A58585858585858585858585858585858585858585858585858585858585858585858585858585858","direction":"tx"}
+{"timestamp":"2025-12-12T23:42:20.810847Z","type":"event","event":"tx_ok"}
+{"message":"TPT:3:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX","timestamp":"2025-12-12T23:42:21.313812Z","type":"lora","hex":"5450543A333A58585858585858585858585858585858585858585858585858585858585858585858585858585858","direction":"tx"}
+{"timestamp":"2025-12-12T23:42:21.442350Z","type":"event","event":"tx_ok"}
+{"message":"TPT:4:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX","timestamp":"2025-12-12T23:42:21.945697Z","type":"lora","hex":"5450543A343A58585858585858585858585858585858585858585858585858585858585858585858585858585858","direction":"tx"}
+{"timestamp":"2025-12-12T23:42:22.074369Z","type":"event","event":"tx_ok"}
+{"message":"TPT:5:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX","timestamp":"2025-12-12T23:42:22.577550Z","type":"lora","hex":"5450543A353A58585858585858585858585858585858585858585858585858585858585858585858585858585858","direction":"tx"}
+{"timestamp":"2025-12-12T23:42:22.706645Z","type":"event","event":"tx_ok"}
+{"message":"TPT:6:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX","timestamp":"2025-12-12T23:42:23.208461Z","type":"lora","hex":"5450543A363A58585858585858585858585858585858585858585858585858585858585858585858585858585858","direction":"tx"}
+{"timestamp":"2025-12-12T23:42:23.336106Z","type":"event","event":"tx_ok"}
+{"message":"TPT:7:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX","timestamp":"2025-12-12T23:42:23.838483Z","type":"lora","hex":"5450543A373A58585858585858585858585858585858585858585858585858585858585858585858585858585858","direction":"tx"}
+{"timestamp":"2025-12-12T23:42:23.967608Z","type":"event","event":"tx_ok"}
+{"message":"TPT:8:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX","timestamp":"2025-12-12T23:42:24.470620Z","type":"lora","hex":"5450543A383A58585858585858585858585858585858585858585858585858585858585858585858585858585858","direction":"tx"}
+{"timestamp":"2025-12-12T23:42:24.600077Z","type":"event","event":"tx_ok"}
+{"message":"TPT:9:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX","timestamp":"2025-12-12T23:42:25.101555Z","type":"lora","hex":"5450543A393A58585858585858585858585858585858585858585858585858585858585858585858585858585858","direction":"tx"}
+{"timestamp":"2025-12-12T23:42:25.229045Z","type":"event","event":"tx_ok"}
+{"message":"TPT:10:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX","timestamp":"2025-12-12T23:42:25.731664Z","type":"lora","hex":"5450543A31303A58585858585858585858585858585858585858585858585858585858585858585858585858585858","direction":"tx"}
+{"timestamp":"2025-12-12T23:42:25.861367Z","type":"event","event":"tx_ok"}
+{"timestamp":"2025-12-12T23:42:26.365032Z","type":"network_test","result":{"label":"demonstration","timestamp":"2025-12-12T23:42:26.362460Z","transport":"lora","test_type":"throughput","packets_sent":10,"duration_ms":6315,"packet_loss_percent":0.0,"bandwidth_bps":633,"bandwidth_kbps":0.63,"bytes_transferred":500,"packets_successful":10,"payload_size":50},"transport":"lora","test_type":"throughput"}
+{"timestamp":"2025-12-12T23:43:10.926701Z","type":"event","event":"WIFI_CONNECTED: wlp0s20f3 at 192.168.12.2"}
+{"timestamp":"2025-12-12T23:45:20.445173Z","type":"event","event":"WIFI_DISCONNECTED: wlp0s20f3"}
+{"timestamp":"2025-12-12T23:45:21.970116Z","type":"event","event":"WIFI_RESET: NetworkManager restored"}
