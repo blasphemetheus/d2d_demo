@@ -41,22 +41,18 @@ configure_bnep0() {
     echo "OK: Connected to $MAC, bnep0 at $IP"
 }
 
-# Power on bluetooth (use timeout to avoid hanging)
+# Power on bluetooth (use timeout to avoid hanging, suppress all output)
 echo "Powering on bluetooth..."
-timeout 3 bluetoothctl power on 2>/dev/null || true
+timeout 3 bluetoothctl power on &>/dev/null || true
 
-# Use individual bluetoothctl commands with timeout (avoids heredoc TTY issues)
-echo "Setting up bluetooth agent..."
-timeout 2 bluetoothctl agent on 2>/dev/null || true
-timeout 2 bluetoothctl default-agent 2>/dev/null || true
-
-# Trust and connect
+# Trust device (agent setup not needed for already-paired devices)
 echo "Trusting $MAC..."
-timeout 3 bluetoothctl trust "$MAC" 2>/dev/null || true
+timeout 3 bluetoothctl trust "$MAC" &>/dev/null || true
 
+# Start connect in background (often fails with "br-connection-not-supported" but that's OK)
 echo "Connecting to $MAC..."
-timeout 10 bluetoothctl connect "$MAC" 2>/dev/null &
-sleep 2
+timeout 10 bluetoothctl connect "$MAC" &>/dev/null &
+sleep 1
 
 # Start bt-network
 echo "Starting bt-network..."
