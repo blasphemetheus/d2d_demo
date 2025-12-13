@@ -10,6 +10,10 @@ echo "Connecting to Bluetooth PAN at $MAC..."
 # Ensure bluetooth is running
 systemctl start bluetooth 2>/dev/null || true
 
+# Kill any stale bt-network processes first
+pkill -f "bt-network" 2>/dev/null || true
+sleep 0.3
+
 # Check if bnep0 already exists and working
 if ip link show bnep0 &>/dev/null; then
     ip link set bnep0 up 2>/dev/null || true
@@ -19,6 +23,8 @@ if ip link show bnep0 &>/dev/null; then
         echo "OK: Already connected to $MAC, bnep0 at $IP"
         exit 0
     fi
+    # Interface exists but not working, clean it up
+    ip link set bnep0 down 2>/dev/null || true
 fi
 
 # Check if bt-network is available
@@ -27,63 +33,51 @@ if ! command -v bt-network &> /dev/null; then
     exit 1
 fi
 
-# Power on bluetooth
-bluetoothctl power on 2>/dev/null || true
-
-# Try bt-network first (works if already paired and Pi NAP is running)
-echo "Attempting bt-network connection..."
-pkill -f "bt-network" 2>/dev/null || true
-sleep 0.5
-bt-network -c "$MAC" nap &
-BT_PID=$!
-
-# Wait for bnep0 (first attempt - 15 seconds)
-for i in {1..15}; do
-  if ip link show bnep0 &>/dev/null; then
+# Function to configure bnep0 when it appears
+configure_bnep0() {
     ip link set bnep0 up
     ip addr flush dev bnep0 2>/dev/null || true
     ip addr add "$IP/24" dev bnep0
     echo "OK: Connected to $MAC, bnep0 at $IP"
-    exit 0
-  fi
-  sleep 1
-  echo "  Waiting... ($i/15)"
-done
+}
 
-# First attempt failed - try with bluetoothctl connect
-echo "First attempt failed, trying bluetoothctl connect..."
-kill $BT_PID 2>/dev/null || true
-pkill -f "bt-network" 2>/dev/null || true
+# Power on bluetooth (use timeout to avoid hanging)
+echo "Powering on bluetooth..."
+timeout 3 bluetoothctl power on 2>/dev/null || true
 
-# Connect via bluetoothctl then bt-network
-bluetoothctl << EOF
-power on
-agent on
-default-agent
-trust $MAC
-connect $MAC
-EOF
-sleep 3
+# Use individual bluetoothctl commands with timeout (avoids heredoc TTY issues)
+echo "Setting up bluetooth agent..."
+timeout 2 bluetoothctl agent on 2>/dev/null || true
+timeout 2 bluetoothctl default-agent 2>/dev/null || true
 
+# Trust and connect
+echo "Trusting $MAC..."
+timeout 3 bluetoothctl trust "$MAC" 2>/dev/null || true
+
+echo "Connecting to $MAC..."
+timeout 10 bluetoothctl connect "$MAC" 2>/dev/null &
+sleep 2
+
+# Start bt-network
+echo "Starting bt-network..."
 bt-network -c "$MAC" nap &
 BT_PID=$!
 
-# Wait for bnep0 (second attempt - 30 seconds)
+# Wait for bnep0 (up to 40 seconds total)
 echo "Waiting for bnep0 interface..."
-for i in {1..30}; do
+for i in {1..40}; do
   if ip link show bnep0 &>/dev/null; then
-    ip link set bnep0 up
-    ip addr flush dev bnep0 2>/dev/null || true
-    ip addr add "$IP/24" dev bnep0
-    echo "OK: Connected to $MAC, bnep0 at $IP"
+    configure_bnep0
     exit 0
   fi
   sleep 1
-  echo "  Waiting... ($i/30)"
+  if (( i % 5 == 0 )); then
+    echo "  Waiting... ($i/40)"
+  fi
 done
 
 # Cleanup if failed
 kill $BT_PID 2>/dev/null || true
 pkill -f "bt-network" 2>/dev/null || true
-echo "ERROR: bnep0 interface not found after multiple attempts"
+echo "ERROR: bnep0 interface not found after 40 seconds"
 exit 1
